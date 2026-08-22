@@ -1,0 +1,117 @@
+{% extends "layout.html" %}
+
+{% block title %}Edit Cattle {{ animal.tag_number }} - Smart Dairy Farm{% endblock %}
+{% block page_title %}Edit Cattle Information{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <div class="content-card">
+      <div class="content-card-header">
+        <h5 class="content-card-title"><i class="fa-solid fa-pen-to-square text-primary"></i> Edit Cattle: {{ animal.tag_number }}</h5>
+        <a href="{{ url_for('animal.animal_detail', id=animal.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="fa-solid fa-arrow-left me-1"></i> Back to Profile
+        </a>
+      </div>
+      <div class="content-card-body">
+        <form method="POST" action="{{ url_for('animal.edit_animal', id=animal.id) }}">
+          <div class="row g-3 mb-4">
+            <!-- Tag Number -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Ear Tag Number *</label>
+              <input type="text" name="tag_number" class="form-control text-uppercase" value="{{ animal.tag_number }}" required>
+            </div>
+
+            <!-- Cattle Name -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Cattle Name / Identifier</label>
+              <input type="text" name="name" class="form-control" value="{{ animal.name or '' }}">
+            </div>
+
+            <!-- Species -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Species *</label>
+              <select name="species" class="form-select" required>
+                <option value="Cow" {% if animal.species == 'Cow' %}selected{% endif %}>Cow (Cattle)</option>
+                <option value="Buffalo" {% if animal.species == 'Buffalo' %}selected{% endif %}>Buffalo</option>
+                <option value="Goat" {% if animal.species == 'Goat' %}selected{% endif %}>Goat</option>
+                <option value="Other" {% if animal.species == 'Other' %}selected{% endif %}>Other</option>
+              </select>
+            </div>
+
+            <!-- Breed -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Breed *</label>
+              <input type="text" name="breed" class="form-control" value="{{ animal.breed }}" required>
+            </div>
+
+            <!-- Gender -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Gender *</label>
+              <select name="gender" class="form-select" required>
+                <option value="Female" {% if animal.gender == 'Female' %}selected{% endif %}>Female</option>
+                <option value="Male" {% if animal.gender == 'Male' %}selected{% endif %}>Male</option>
+              </select>
+            </div>
+
+            <!-- Date of Birth -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Date of Birth</label>
+              <input type="date" name="dob" class="form-control" value="{{ animal.dob.strftime('%Y-%m-%d') if animal.dob else '' }}">
+            </div>
+
+            <!-- Weight -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Weight (kg)</label>
+              <input type="number" step="0.1" name="weight_kg" class="form-control" value="{{ animal.weight_kg or '' }}">
+            </div>
+
+            <!-- Milking Status -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Milking / Life Status *</label>
+              <select name="milking_status" class="form-select" required>
+                <option value="Milking" {% if animal.milking_status == 'Milking' %}selected{% endif %}>Milking</option>
+                <option value="Dry" {% if animal.milking_status == 'Dry' %}selected{% endif %}>Dry</option>
+                <option value="Pregnant" {% if animal.milking_status == 'Pregnant' %}selected{% endif %}>Pregnant</option>
+                <option value="Sick" {% if animal.milking_status == 'Sick' %}selected{% endif %}>Sick</option>
+                <option value="Calf" {% if animal.milking_status == 'Calf' %}selected{% endif %}>Calf</option>
+                <option value="Sold" {% if animal.milking_status == 'Sold' %}selected{% endif %}>Sold</option>
+              </select>
+            </div>
+
+            <!-- Health Status -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Health Status *</label>
+              <select name="health_status" class="form-select" required>
+                <option value="Healthy" {% if animal.health_status == 'Healthy' %}selected{% endif %}>Healthy</option>
+                <option value="Under Treatment" {% if animal.health_status == 'Under Treatment' %}selected{% endif %}>Under Treatment</option>
+                <option value="Quarantined" {% if animal.health_status == 'Quarantined' %}selected{% endif %}>Quarantined</option>
+                <option value="Critical" {% if animal.health_status == 'Critical' %}selected{% endif %}>Critical</option>
+              </select>
+            </div>
+
+            <!-- Entry Date -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Farm Entry Date</label>
+              <input type="date" name="entry_date" class="form-control" value="{{ animal.entry_date.strftime('%Y-%m-%d') if animal.entry_date else '' }}">
+            </div>
+
+            <!-- Notes -->
+            <div class="col-md-8">
+              <label class="form-label fw-bold">Pedigree / Health Notes</label>
+              <textarea name="notes" class="form-control" rows="2">{{ animal.notes or '' }}</textarea>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 border-top pt-3">
+            <a href="{{ url_for('animal.animal_detail', id=animal.id) }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-custom-primary">
+              <i class="fa-solid fa-floppy-disk me-1"></i> Update Details
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

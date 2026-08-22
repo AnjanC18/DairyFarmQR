@@ -1,0 +1,121 @@
+{% extends "layout.html" %}
+
+{% block title %}Register Cattle - Smart Dairy Farm{% endblock %}
+{% block page_title %}Register New Cattle{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <div class="content-card">
+      <div class="content-card-header">
+        <h5 class="content-card-title"><i class="fa-solid fa-cow text-primary"></i> Cattle Registration Form</h5>
+        <a href="{{ url_for('animal.list_animals') }}" class="btn btn-sm btn-outline-secondary">
+          <i class="fa-solid fa-arrow-left me-1"></i> Back to List
+        </a>
+      </div>
+      <div class="content-card-body">
+        <form method="POST" action="{{ url_for('animal.add_animal') }}">
+          <div class="row g-3 mb-4">
+            <!-- Tag Number -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Ear Tag Number *</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fa-solid fa-tag text-muted"></i></span>
+                <input type="text" name="tag_number" class="form-control text-uppercase" placeholder="e.g. DF-109" required autofocus>
+              </div>
+              <div class="form-text">Unique identification tag. QR code will be generated automatically.</div>
+            </div>
+
+            <!-- Cattle Name / Nickname -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Cattle Name / Identifier</label>
+              <input type="text" name="name" class="form-control" placeholder="e.g. Ganga, Lakshmi (Optional)">
+            </div>
+
+            <!-- Species -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Species *</label>
+              <select name="species" class="form-select" required>
+                <option value="Cow" selected>Cow (Cattle)</option>
+                <option value="Buffalo">Buffalo</option>
+                <option value="Goat">Goat</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <!-- Breed -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Breed *</label>
+              <input type="text" name="breed" class="form-control" placeholder="e.g. Gir, Sahiwal, Murrah, HF, Jersey" required>
+            </div>
+
+            <!-- Gender -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Gender *</label>
+              <select name="gender" class="form-select" required>
+                <option value="Female" selected>Female</option>
+                <option value="Male">Male</option>
+              </select>
+            </div>
+
+            <!-- Date of Birth -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Date of Birth</label>
+              <input type="date" name="dob" class="form-control">
+            </div>
+
+            <!-- Weight -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Weight (kg)</label>
+              <input type="number" step="0.1" name="weight_kg" class="form-control" placeholder="e.g. 420.5">
+            </div>
+
+            <!-- Milking Status -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Milking / Life Status *</label>
+              <select name="milking_status" class="form-select" required>
+                <option value="Milking" selected>Milking (In Milk)</option>
+                <option value="Dry">Dry (Non-lactating)</option>
+                <option value="Pregnant">Pregnant</option>
+                <option value="Sick">Sick / Under Treatment</option>
+                <option value="Calf">Calf</option>
+                <option value="Sold">Sold / Transferred</option>
+              </select>
+            </div>
+
+            <!-- Health Status -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Health Status *</label>
+              <select name="health_status" class="form-select" required>
+                <option value="Healthy" selected>Healthy</option>
+                <option value="Under Treatment">Under Treatment</option>
+                <option value="Quarantined">Quarantined</option>
+                <option value="Critical">Critical</option>
+              </select>
+            </div>
+
+            <!-- Entry Date -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Farm Entry Date</label>
+              <input type="date" name="entry_date" class="form-control">
+            </div>
+
+            <!-- Notes -->
+            <div class="col-md-8">
+              <label class="form-label fw-bold">Pedigree / Health Notes</label>
+              <textarea name="notes" class="form-control" rows="2" placeholder="Dam, Sire info, medical history or markings..."></textarea>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 border-top pt-3">
+            <a href="{{ url_for('animal.list_animals') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-custom-primary">
+              <i class="fa-solid fa-floppy-disk me-1"></i> Save & Generate QR Tag
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

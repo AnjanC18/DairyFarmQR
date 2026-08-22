@@ -1,0 +1,184 @@
+{% extends "layout.html" %}
+
+{% block title %}Scan Cattle QR Tag - Smart Dairy Farm{% endblock %}
+{% block page_title %}Real-time Cattle QR Tag Scanner{% endblock %}
+
+{% block extra_head %}
+<!-- HTML5 QR Code Scanner Library -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-md-8">
+    <!-- QR Scanner Card -->
+    <div class="content-card mb-4">
+      <div class="content-card-header">
+        <h5 class="content-card-title"><i class="fa-solid fa-camera text-primary"></i> Camera QR Code Scanner</h5>
+      </div>
+      <div class="content-card-body text-center p-4">
+        <p class="text-muted small mb-3">
+          Point your mobile or laptop camera at any cattle's ear tag QR code to instantly pull up records.
+        </p>
+
+        <!-- QR Scanner Render Area -->
+        <div id="reader" style="width: 100%; max-width: 400px; margin: 0 auto; min-height: 250px;"></div>
+
+        <div class="mt-3 d-flex justify-content-center gap-2">
+          <button id="startScanBtn" class="btn btn-sm btn-custom-primary">
+            <i class="fa-solid fa-play me-1"></i> Start Camera
+          </button>
+          <button id="stopScanBtn" class="btn btn-sm btn-outline-secondary" disabled>
+            <i class="fa-solid fa-stop me-1"></i> Stop Camera
+          </button>
+        </div>
+
+        <!-- Manual Tag Search Fallback -->
+        <div class="mt-4 pt-3 border-top">
+          <label class="form-label fw-bold small text-muted">Or enter Ear Tag Number manually:</label>
+          <div class="input-group">
+            <input type="text" id="manualTagInput" class="form-control text-uppercase" placeholder="e.g. DF-101">
+            <button id="manualLookupBtn" class="btn btn-primary" type="button">
+              <i class="fa-solid fa-magnifying-glass me-1"></i> Lookup
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scanned Animal Result Card (Hidden Initially) -->
+    <div id="resultCard" class="content-card border-primary d-none shadow-md">
+      <div class="content-card-header bg-primary text-white">
+        <h5 class="content-card-title text-white mb-0">
+          <i class="fa-solid fa-circle-check me-2"></i> Cattle Identified!
+        </h5>
+        <span id="resultMilkingStatus" class="badge bg-white text-primary fw-bold"></span>
+      </div>
+      <div class="content-card-body p-4">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="rounded-3 bg-light p-3 border text-center" style="width: 70px;">
+            <i class="fa-solid fa-cow fs-2 text-primary"></i>
+          </div>
+          <div>
+            <h4 id="resultTag" class="fw-bold mb-0 text-dark"></h4>
+            <div id="resultNameBreed" class="text-muted fw-semibold"></div>
+          </div>
+        </div>
+
+        <div class="row g-2 p-3 bg-light rounded-3 mb-3 small">
+          <div class="col-6"><strong>Species:</strong> <span id="resultSpecies"></span></div>
+          <div class="col-6"><strong>Age:</strong> <span id="resultAge"></span></div>
+          <div class="col-6"><strong>Health Status:</strong> <span id="resultHealth"></span></div>
+          <div class="col-6"><strong>Today's Milk:</strong> <span id="resultTodayMilk" class="text-success fw-bold"></span></div>
+          <div class="col-12 mt-2 pt-2 border-top">
+            <strong>Last Milk Entry:</strong> <span id="resultLastMilk" class="text-muted"></span>
+          </div>
+        </div>
+
+        <div class="d-grid gap-2">
+          <a id="logMilkLink" href="#" class="btn btn-custom-primary">
+            <i class="fa-solid fa-glass-water me-1"></i> Log Milk For This Cattle
+          </a>
+          <a id="viewProfileLink" href="#" class="btn btn-outline-primary">
+            <i class="fa-solid fa-eye me-1"></i> View Full Lifetime Profile
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  let html5QrCode = null;
+  const startBtn = document.getElementById('startScanBtn');
+  const stopBtn = document.getElementById('stopScanBtn');
+  const resultCard = document.getElementById('resultCard');
+  const manualBtn = document.getElementById('manualLookupBtn');
+  const manualInput = document.getElementById('manualTagInput');
+
+  function lookupAnimal(tag) {
+    if (!tag) return;
+    
+    fetch(`/api/qr/lookup/${encodeURIComponent(tag)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const a = data.animal;
+          document.getElementById('resultTag').textContent = a.tag_number;
+          document.getElementById('resultNameBreed').textContent = `${a.name} • ${a.breed} (${a.gender})`;
+          document.getElementById('resultSpecies').textContent = a.species;
+          document.getElementById('resultAge').textContent = a.age;
+          document.getElementById('resultHealth').textContent = a.health_status;
+          document.getElementById('resultTodayMilk').textContent = a.today_milk;
+          document.getElementById('resultMilkingStatus').textContent = a.milking_status;
+
+          if (a.last_milk) {
+            document.getElementById('resultLastMilk').textContent = `${a.last_milk.qty} (${a.last_milk.session}) on ${a.last_milk.date}`;
+          } else {
+            document.getElementById('resultLastMilk').textContent = 'No previous records';
+          }
+
+          document.getElementById('logMilkLink').href = `/milk?animal_id=${a.id}`;
+          document.getElementById('viewProfileLink').href = `/animals/${a.id}`;
+
+          resultCard.classList.remove('d-none');
+          resultCard.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          alert(data.message || 'Animal not found.');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Error communicating with dairy server.');
+      });
+  }
+
+  manualBtn.addEventListener('click', () => {
+    lookupAnimal(manualInput.value.trim());
+  });
+
+  manualInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      lookupAnimal(manualInput.value.trim());
+    }
+  });
+
+  startBtn.addEventListener('click', () => {
+    html5QrCode = new Html5Qrcode("reader");
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+    html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      (decodedText, decodedResult) => {
+        console.log(`Scan result: ${decodedText}`);
+        lookupAnimal(decodedText.trim());
+        // Pause or stop scanner after success
+        html5QrCode.stop().then(() => {
+          startBtn.disabled = false;
+          stopBtn.disabled = true;
+        });
+      },
+      (errorMessage) => {
+        // scan error / waiting
+      }
+    ).then(() => {
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+    }).catch(err => {
+      alert("Camera access error: " + err);
+    });
+  });
+
+  stopBtn.addEventListener('click', () => {
+    if (html5QrCode) {
+      html5QrCode.stop().then(() => {
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      });
+    }
+  });
+</script>
+{% endblock %}

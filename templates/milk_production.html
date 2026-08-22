@@ -1,0 +1,246 @@
+{% extends "layout.html" %}
+
+{% block title %}Milk Production Monitoring - Smart Dairy Farm{% endblock %}
+{% block page_title %}Daily Milk Production Monitoring{% endblock %}
+
+{% block content %}
+<!-- Top Header & Action Row -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Milk Yield & Production Register</h4>
+    <p class="text-muted small mb-0">Record, monitor, and calculate daily morning and evening milk outputs.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button type="button" class="btn btn-custom-primary" data-bs-toggle="modal" data-bs-target="#addMilkModal">
+      <i class="fa-solid fa-plus me-1"></i> Single Milk Entry
+    </button>
+    <a href="{{ url_for('milk.quick_entry') }}" class="btn btn-outline-primary">
+      <i class="fa-solid fa-bolt me-1"></i> Session Batch Entry
+    </a>
+  </div>
+</div>
+
+<!-- Summary Metric Cards for Selected View -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-3 col-sm-6">
+    <div class="stat-card" style="--card-accent: #2563eb;">
+      <div>
+        <div class="stat-label">Total Milk Logged</div>
+        <div class="stat-value text-primary">{{ total_qty }} <span class="fs-6 text-muted">L</span></div>
+        <div class="small text-muted mt-1">{{ records|length }} session entries</div>
+      </div>
+      <div class="stat-icon primary"><i class="fa-solid fa-glass-water"></i></div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-sm-6">
+    <div class="stat-card" style="--card-accent: #10b981;">
+      <div>
+        <div class="stat-label">Total Valuation</div>
+        <div class="stat-value text-success">₹{{ total_revenue }}</div>
+        <div class="small text-muted mt-1">Based on session rates</div>
+      </div>
+      <div class="stat-icon success"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-sm-6">
+    <div class="stat-card" style="--card-accent: #f59e0b;">
+      <div>
+        <div class="stat-label">Session Split</div>
+        <div class="stat-value text-warning">{{ morning_qty }} / {{ evening_qty }} <span class="fs-6 text-muted">L</span></div>
+        <div class="small text-muted mt-1">Morning / Evening Yield</div>
+      </div>
+      <div class="stat-icon warning"><i class="fa-solid fa-cloud-sun"></i></div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-sm-6">
+    <div class="stat-card" style="--card-accent: #8b5cf6;">
+      <div>
+        <div class="stat-label">Average Fat %</div>
+        <div class="stat-value text-purple">{{ avg_fat }}%</div>
+        <div class="small text-muted mt-1">Quality indicator</div>
+      </div>
+      <div class="stat-icon purple"><i class="fa-solid fa-flask-vial"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="content-card mb-4">
+  <div class="content-card-body p-3">
+    <form method="GET" action="{{ url_for('milk.milk_list') }}" class="row g-2 align-items-center">
+      <div class="col-md-3">
+        <label class="form-label small fw-bold mb-1">Filter by Date</label>
+        <input type="date" name="date" class="form-control form-control-sm" value="{{ selected_date }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-bold mb-1">Session</label>
+        <select name="session" class="form-select form-select-sm">
+          <option value="">All Sessions</option>
+          <option value="Morning" {% if selected_session == 'Morning' %}selected{% endif %}>Morning</option>
+          <option value="Evening" {% if selected_session == 'Evening' %}selected{% endif %}>Evening</option>
+          <option value="Afternoon" {% if selected_session == 'Afternoon' %}selected{% endif %}>Afternoon</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-bold mb-1">Cattle</label>
+        <select name="animal_id" class="form-select form-select-sm">
+          <option value="">All Milking Cattle</option>
+          {% for a in animals %}
+            <option value="{{ a.id }}" {% if selected_animal == a.id|string %}selected{% endif %}>{{ a.tag_number }} ({{ a.name or a.breed }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3 d-flex gap-2 align-items-end">
+        <button type="submit" class="btn btn-sm btn-primary flex-grow-1"><i class="fa-solid fa-filter me-1"></i> Apply Filter</button>
+        <a href="{{ url_for('milk.milk_list') }}" class="btn btn-sm btn-light border" title="Reset"><i class="fa-solid fa-rotate-left"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Milk Records Table -->
+<div class="content-card">
+  <div class="content-card-header">
+    <h5 class="content-card-title"><i class="fa-solid fa-table-list text-primary"></i> Production Register Entries</h5>
+    <span class="badge bg-primary rounded-pill">{{ records|length }} Records</span>
+  </div>
+  <div class="content-card-body p-0">
+    <div class="table-responsive">
+      <table class="table custom-table searchable-table align-middle">
+        <thead>
+          <tr>
+            <th>Date & Time</th>
+            <th>Session</th>
+            <th>Cattle Tag / Name</th>
+            <th>Quantity (L)</th>
+            <th>Fat %</th>
+            <th>SNF %</th>
+            <th>Rate / L</th>
+            <th>Total (₹)</th>
+            <th>Recorded By</th>
+            <th class="text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+            <tr>
+              <td class="fw-bold">{{ r.date.strftime('%d %b %Y') }}</td>
+              <td>
+                <span class="badge {% if r.session == 'Morning' %}bg-primary{% else %}bg-secondary{% endif %}">{{ r.session }}</span>
+              </td>
+              <td>
+                <a href="{{ url_for('animal.animal_detail', id=r.animal_id) }}" class="fw-bold text-primary text-decoration-none">
+                  {{ r.animal.tag_number }}
+                </a>
+                <div class="small text-muted">{{ r.animal.name or r.animal.breed }}</div>
+              </td>
+              <td class="fw-bold text-success fs-6">{{ r.quantity_liters }} L</td>
+              <td>{{ r.fat_percentage }}%</td>
+              <td>{{ r.snf_percentage }}%</td>
+              <td>₹{{ r.rate_per_liter }}</td>
+              <td class="fw-bold text-dark">₹{{ r.total_amount }}</td>
+              <td class="small text-muted">{{ r.recorded_by }}</td>
+              <td class="text-end">
+                <form method="POST" action="{{ url_for('milk.delete_milk', id=r.id) }}" class="d-inline" onsubmit="return confirm('Delete this milk record?');">
+                  <button type="submit" class="btn btn-sm btn-light border text-danger" title="Delete Record">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="10" class="text-center py-5 text-muted">
+                <i class="fa-solid fa-glass-water fs-1 mb-3 text-muted d-block"></i>
+                <h5>No Milk Records Found</h5>
+                <p class="small">Log today's morning or evening milk yield to see entries here.</p>
+                <button type="button" class="btn btn-sm btn-custom-primary mt-2" data-bs-toggle="modal" data-bs-target="#addMilkModal">
+                  <i class="fa-solid fa-plus me-1"></i> Log Milk Entry
+                </button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add Milk Record Modal -->
+<div class="modal fade" id="addMilkModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="fa-solid fa-glass-water text-primary me-2"></i> Log Milk Production</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('milk.add_milk') }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-bold">Select Cattle *</label>
+            <select name="animal_id" class="form-select" required>
+              <option value="">-- Choose Cattle Tag --</option>
+              {% for a in animals %}
+                <option value="{{ a.id }}" {% if preselect_animal == a.id|string %}selected{% endif %}>
+                  {{ a.tag_number }} - {{ a.name or a.breed }} ({{ a.species }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-bold">Date *</label>
+              <input type="date" name="date" class="form-control" value="{{ today }}" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-bold">Session *</label>
+              <select name="session" class="form-select" required>
+                <option value="Morning" selected>Morning</option>
+                <option value="Evening">Evening</option>
+                <option value="Afternoon">Afternoon</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-bold">Quantity (Liters) *</label>
+              <input type="number" step="0.1" name="quantity_liters" id="milkQuantity" class="form-control" placeholder="e.g. 12.5" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-bold">Rate / Liter (₹)</label>
+              <input type="number" step="0.5" name="rate_per_liter" id="milkRate" class="form-control" value="40.0">
+            </div>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-bold">Fat %</label>
+              <input type="number" step="0.1" name="fat_percentage" class="form-control" value="4.2">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-bold">SNF %</label>
+              <input type="number" step="0.1" name="snf_percentage" class="form-control" value="8.5">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Estimated Total Value (₹)</label>
+            <input type="text" id="milkTotalAmount" class="form-control bg-light fw-bold text-success" readonly value="0.00">
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-bold">Remarks</label>
+            <input type="text" name="remarks" class="form-control" placeholder="Optional notes">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-custom-primary"><i class="fa-solid fa-check me-1"></i> Save Entry</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
