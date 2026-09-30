@@ -1,0 +1,89 @@
+{% extends "layout.html" %}
+
+{% block title %}Create User Login - Smart Dairy Farm{% endblock %}
+{% block page_title %}Create New User Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-xl-7">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h4 class="fw-bold mb-1"><i class="fa-solid fa-user-plus text-primary me-2"></i>Create New User Login</h4>
+        <p class="text-muted small mb-0">Provision credentials and assign system roles for farm personnel.</p>
+      </div>
+      <a href="{{ url_for('auth.user_list') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fa-solid fa-arrow-left me-1"></i> Back to Users List
+      </a>
+    </div>
+
+    <div class="content-card">
+      <div class="content-card-header bg-light">
+        <h5 class="content-card-title mb-0">
+          <i class="fa-solid fa-shield-halved text-primary me-2"></i> User Account Details
+        </h5>
+      </div>
+      <div class="content-card-body p-4">
+        <form method="POST" action="{{ url_for('auth.register') }}">
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-muted small">Full Name *</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light"><i class="fa-solid fa-id-card text-muted"></i></span>
+              <input type="text" name="full_name" class="form-control" placeholder="e.g. Ramesh Patel" required autofocus>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-muted small">Username *</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fa-solid fa-user text-muted"></i></span>
+                <input type="text" name="username" class="form-control" placeholder="e.g. ramesh" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-muted small">System Role *</label>
+              <select name="role" class="form-select" required>
+                <option value="staff" selected>Farm Staff (Standard Entry)</option>
+                <option value="manager">Farm Manager (Operations & Reports)</option>
+                <option value="admin">Administrator (Full Control)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-muted small">Email Address *</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light"><i class="fa-solid fa-envelope text-muted"></i></span>
+              <input type="email" name="email" class="form-control" placeholder="ramesh@dairy.com" required>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-muted small">Initial Password *</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fa-solid fa-lock text-muted"></i></span>
+                <input type="password" name="password" class="form-control" placeholder="Min. 6 characters" required minlength="6">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-muted small">Confirm Password *</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fa-solid fa-shield-halved text-muted"></i></span>
+                <input type="password" name="confirm_password" class="form-control" placeholder="Re-enter password" required minlength="6">
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{{ url_for('auth.user_list') }}" class="btn btn-light border px-3">Cancel</a>
+            <button type="submit" class="btn btn-custom-primary px-4">
+              <i class="fa-solid fa-check me-1"></i> Create User Account
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

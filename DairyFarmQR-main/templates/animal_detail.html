@@ -1,0 +1,265 @@
+{% extends "layout.html" %}
+
+{% block title %}Cattle {{ animal.tag_number }} - Smart Dairy Farm{% endblock %}
+{% block page_title %}Cattle Profile: {{ animal.tag_number }}{% endblock %}
+
+{% block content %}
+<!-- Top Header & Actions -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div class="d-flex align-items-center gap-3">
+    <div class="rounded-3 bg-primary text-white p-3 d-flex align-items-center justify-content-center shadow-sm" style="font-size: 1.8rem; width: 64px; height: 64px;">
+      <i class="fa-solid fa-cow"></i>
+    </div>
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <h3 class="fw-bold mb-0 text-dark">{{ animal.tag_number }}</h3>
+        {% if animal.name %}
+          <span class="fs-5 text-muted fw-semibold">({{ animal.name }})</span>
+        {% endif %}
+        
+        <!-- Badges -->
+        {% if animal.milking_status == 'Milking' %}
+          <span class="badge-status badge-milking"><i class="fa-solid fa-droplet"></i> Milking</span>
+        {% elif animal.milking_status == 'Dry' %}
+          <span class="badge-status badge-dry">Dry</span>
+        {% elif animal.milking_status == 'Pregnant' %}
+          <span class="badge-status badge-pregnant">Pregnant</span>
+        {% elif animal.milking_status == 'Sick' %}
+          <span class="badge-status badge-sick">Sick</span>
+        {% else %}
+          <span class="badge bg-secondary">{{ animal.milking_status }}</span>
+        {% endif %}
+
+        {% if animal.health_status == 'Healthy' %}
+          <span class="badge-status badge-healthy">Healthy</span>
+        {% else %}
+          <span class="badge-status badge-treatment">{{ animal.health_status }}</span>
+        {% endif %}
+      </div>
+      <p class="text-muted small mb-0">{{ animal.species }} &bull; Breed: <strong>{{ animal.breed }}</strong> &bull; Registered: {{ animal.entry_date.strftime('%d %b %Y') if animal.entry_date else 'N/A' }}</p>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('milk.milk_list', animal_id=animal.id) }}" class="btn btn-custom-primary">
+      <i class="fa-solid fa-glass-water me-1"></i> Log Milk
+    </a>
+    <a href="{{ url_for('animal.edit_animal', id=animal.id) }}" class="btn btn-outline-secondary">
+      <i class="fa-solid fa-pen-to-square me-1"></i> Edit
+    </a>
+    <button onclick="window.print()" class="btn btn-outline-dark no-print">
+      <i class="fa-solid fa-print me-1"></i> Print Profile
+    </button>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Key Metrics & Bio -->
+  <div class="col-xl-8">
+    <div class="row g-3 mb-4">
+      <div class="col-sm-4">
+        <div class="stat-card" style="--card-accent: #10b981;">
+          <div>
+            <div class="stat-label">Total Milk Output</div>
+            <div class="stat-value text-success">{{ animal.total_milk }} <span class="fs-6 text-muted">L</span></div>
+            <div class="small text-muted mt-1">Recorded to date</div>
+          </div>
+          <div class="stat-icon success"><i class="fa-solid fa-droplet"></i></div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="stat-card" style="--card-accent: #2563eb;">
+          <div>
+            <div class="stat-label">Recent Avg Yield</div>
+            <div class="stat-value text-primary">{{ avg_yield }} <span class="fs-6 text-muted">L/day</span></div>
+            <div class="small text-muted mt-1">Last 14 records</div>
+          </div>
+          <div class="stat-icon primary"><i class="fa-solid fa-chart-simple"></i></div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="stat-card" style="--card-accent: #8b5cf6;">
+          <div>
+            <div class="stat-label">Today's Production</div>
+            <div class="stat-value text-purple">{{ animal.today_milk }} <span class="fs-6 text-muted">L</span></div>
+            <div class="small text-muted mt-1">Logged today</div>
+          </div>
+          <div class="stat-icon purple"><i class="fa-solid fa-calendar-day"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bio Card -->
+    <div class="content-card">
+      <div class="content-card-header">
+        <h5 class="content-card-title"><i class="fa-solid fa-id-card text-primary"></i> Cattle Specifications & Pedigree</h5>
+      </div>
+      <div class="content-card-body">
+        <div class="row g-3">
+          <div class="col-sm-3 col-6">
+            <div class="text-muted small">Ear Tag ID</div>
+            <div class="fw-bold fs-6">{{ animal.tag_number }}</div>
+          </div>
+          <div class="col-sm-3 col-6">
+            <div class="text-muted small">Age</div>
+            <div class="fw-bold fs-6">{{ animal.age }}</div>
+          </div>
+          <div class="col-sm-3 col-6">
+            <div class="text-muted small">Gender</div>
+            <div class="fw-bold fs-6">{{ animal.gender }}</div>
+          </div>
+          <div class="col-sm-3 col-6">
+            <div class="text-muted small">Live Weight</div>
+            <div class="fw-bold fs-6">{{ animal.weight_kg }} kg{% if not animal.weight_kg %}N/A{% endif %}</div>
+          </div>
+          <div class="col-sm-3 col-6">
+            <div class="text-muted small">Date of Birth</div>
+            <div class="fw-bold fs-6">{{ animal.dob.strftime('%d %b %Y') if animal.dob else 'N/A' }}</div>
+          </div>
+          <div class="col-sm-3 col-6">
+            <div class="text-muted small">Species</div>
+            <div class="fw-bold fs-6">{{ animal.species }}</div>
+          </div>
+          <div class="col-sm-3 col-6">
+            <div class="text-muted small">Breed</div>
+            <div class="fw-bold fs-6">{{ animal.breed }}</div>
+          </div>
+          <div class="col-sm-3 col-6">
+            <div class="text-muted small">Health State</div>
+            <div class="fw-bold fs-6">{{ animal.health_status }}</div>
+          </div>
+          {% if animal.notes %}
+            <div class="col-12 mt-3 pt-3 border-top">
+              <div class="text-muted small mb-1">Veterinary / Pedigree Notes:</div>
+              <div class="p-3 bg-light rounded text-dark">{{ animal.notes }}</div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Tag Card -->
+  <div class="col-xl-4">
+    <div class="content-card text-center h-100 d-flex flex-column justify-content-between">
+      <div class="content-card-header">
+        <h5 class="content-card-title"><i class="fa-solid fa-qrcode text-primary"></i> Digital Tag QR Code</h5>
+      </div>
+      <div class="content-card-body d-flex flex-column align-items-center justify-content-center py-4">
+        <div class="p-3 bg-white border rounded-3 shadow-sm mb-3" style="display: inline-block;">
+          <img src="{{ url_for('static', filename='qr_codes/' + animal.qr_code_image) }}" class="img-fluid" style="max-width: 200px;" alt="QR Code Tag">
+        </div>
+        <h6 class="fw-bold mb-1">Cattle Ear Tag: {{ animal.tag_number }}</h6>
+        <p class="text-muted small mb-3">Scan with mobile camera to quickly log milk or check medical status.</p>
+        <a href="{{ url_for('qr.download_qr', animal_id=animal.id) }}" class="btn btn-outline-primary btn-sm px-4">
+          <i class="fa-solid fa-download me-1"></i> Download Printable Tag
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs: Milk Production History & Vaccination Records -->
+<div class="content-card">
+  <div class="content-card-header p-2">
+    <ul class="nav nav-pills" id="animalTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active fw-bold py-2 px-4" id="milk-tab" data-bs-toggle="pill" data-bs-target="#milk-pane" type="button" role="tab">
+          <i class="fa-solid fa-glass-water me-2"></i> Milk Production Log ({{ milk_records|length }})
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold py-2 px-4" id="vaccine-tab" data-bs-toggle="pill" data-bs-target="#vaccine-pane" type="button" role="tab">
+          <i class="fa-solid fa-syringe me-2"></i> Health & Vaccinations ({{ vaccinations|length }})
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <div class="content-card-body p-0">
+    <div class="tab-content" id="animalTabContent">
+      <!-- Milk Tab -->
+      <div class="tab-pane fade show active" id="milk-pane" role="tabpanel">
+        <div class="table-responsive">
+          <table class="table custom-table mb-0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Milking Session</th>
+                <th>Yield (Liters)</th>
+                <th>Fat %</th>
+                <th>SNF %</th>
+                <th>Rate / Liter</th>
+                <th>Total Value</th>
+                <th>Recorded By</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in milk_records %}
+                <tr>
+                  <td class="fw-bold">{{ m.date.strftime('%d %b %Y') }}</td>
+                  <td>
+                    <span class="badge {% if m.session == 'Morning' %}bg-primary{% else %}bg-secondary{% endif %}">{{ m.session }}</span>
+                  </td>
+                  <td class="fw-bold text-success">{{ m.quantity_liters }} L</td>
+                  <td>{{ m.fat_percentage }}%</td>
+                  <td>{{ m.snf_percentage }}%</td>
+                  <td>₹{{ m.rate_per_liter }}</td>
+                  <td class="fw-bold">₹{{ m.total_amount }}</td>
+                  <td class="text-muted small">{{ m.recorded_by }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="8" class="text-center py-4 text-muted">No milk records logged for this animal yet.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Vaccination Tab -->
+      <div class="tab-pane fade" id="vaccine-pane" role="tabpanel">
+        <div class="table-responsive">
+          <table class="table custom-table mb-0">
+            <thead>
+              <tr>
+                <th>Vaccine / Disease</th>
+                <th>Administered Date</th>
+                <th>Next Booster Due</th>
+                <th>Veterinarian</th>
+                <th>Status</th>
+                <th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for v in vaccinations %}
+                <tr>
+                  <td class="fw-bold">{{ v.vaccine_name }}</td>
+                  <td>{{ v.administered_date.strftime('%d %b %Y') }}</td>
+                  <td>{{ v.next_due_date.strftime('%d %b %Y') }}</td>
+                  <td>{{ v.veterinarian or 'N/A' }}</td>
+                  <td>
+                    {% if v.status == 'Completed' %}
+                      <span class="badge-status badge-completed">Completed</span>
+                    {% elif v.status == 'Overdue' %}
+                      <span class="badge-status badge-overdue">Overdue</span>
+                    {% else %}
+                      <span class="badge-status badge-upcoming">Upcoming</span>
+                    {% endif %}
+                  </td>
+                  <td class="small text-muted">{{ v.remarks or '-' }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-muted">No vaccination history recorded for this animal.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

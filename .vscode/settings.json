@@ -1,0 +1,8 @@
+{
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/DairyFarmQR-main"
+    ],
+    "python.autoComplete.extraPaths": [
+        "${workspaceFolder}/DairyFarmQR-main"
+    ]
+}

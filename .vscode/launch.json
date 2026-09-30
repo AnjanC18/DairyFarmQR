@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Flask App (DairyFarm)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/app.py",
+            "console": "integratedTerminal",
+            "jinja": true,
+            "justMyCode": true,
+            "env": {
+                "FLASK_ENV": "development",
+                "FLASK_DEBUG": "1"
+            }
+        },
+        {
+            "name": "Python: Inner Project Flask App",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/DairyFarmQR-main/app.py",
+            "cwd": "${workspaceFolder}/DairyFarmQR-main",
+            "console": "integratedTerminal",
+            "jinja": true,
+            "justMyCode": true,
+            "env": {
+                "FLASK_ENV": "development",
+                "FLASK_DEBUG": "1"
+            }
+        }
+    ]
+}

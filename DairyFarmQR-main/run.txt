@@ -1,0 +1,69 @@
+================================================================================
+           SMART DAIRY FARM MANAGEMENT SYSTEM - HOW TO RUN IN VS CODE
+================================================================================
+
+PREREQUISITES:
+--------------
+- Python 3.10+ installed on your computer.
+- VS Code with the "Python" extension installed.
+
+
+--------------------------------------------------------------------------------
+METHOD 1: RUN IN VS CODE TERMINAL (FASTEST & RECOMMENDED)
+--------------------------------------------------------------------------------
+
+1. Open VS Code Terminal:
+   - Press: Ctrl + ` (backtick)  OR  Menu -> Terminal -> New Terminal
+
+2. Install dependencies:
+   pip install -r requirements.txt
+
+3. Start the application:
+   python app.py
+
+4. Open in browser:
+   Hold Ctrl and click: http://localhost:5000  (or visit http://127.0.0.1:5000)
+
+
+--------------------------------------------------------------------------------
+METHOD 2: 1-CLICK VS CODE RUN & DEBUG (F5)
+--------------------------------------------------------------------------------
+
+1. In VS Code, press: F5
+   (or click the "Run & Debug" icon on the left sidebar and click the Green Play button).
+
+2. VS Code will automatically start the Flask server in the integrated terminal.
+
+3. Visit http://localhost:5000 in your browser.
+
+
+--------------------------------------------------------------------------------
+DEFAULT LOGIN CREDENTIALS & ROLE-BASED ACCESS
+--------------------------------------------------------------------------------
+Username : admin
+Password : admin123
+Role     : Administrator (Full Access)
+
+SECURITY NOTE:
+- Public account registration is disabled to maintain farm data security.
+- To create new logins for Farm Managers or Farm Staff, log in as `admin`
+  and navigate to "User Logins & Access" in the sidebar menu.
+
+
+--------------------------------------------------------------------------------
+FREQUENT VS CODE ISSUES & FIXES
+--------------------------------------------------------------------------------
+
+Issue 1: "python: command not found" or wrong Python version
+Fix: Press `Ctrl + Shift + P` in VS Code, type "Python: Select Interpreter", 
+     and select your installed Python version.
+
+Issue 2: "pip install -r requirements.txt error: No such file or directory"
+Fix: Make sure you run `cd DairyFarmQR-main` in the terminal if you opened 
+     the outer download folder.
+
+Issue 3: "Execution of scripts is disabled on this system"
+Fix: Run this command in PowerShell:
+     Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+================================================================================

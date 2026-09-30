@@ -1,0 +1,102 @@
+{% extends "layout.html" %}
+
+{% block title %}Quick Batch Milk Entry - Smart Dairy Farm{% endblock %}
+{% block page_title %}Session Batch Milk Entry{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <div class="content-card">
+      <div class="content-card-header">
+        <h5 class="content-card-title"><i class="fa-solid fa-bolt text-warning"></i> Fast Milking Session Batch Entry</h5>
+        <a href="{{ url_for('milk.milk_list') }}" class="btn btn-sm btn-outline-secondary">
+          <i class="fa-solid fa-arrow-left me-1"></i> Back to Register
+        </a>
+      </div>
+      <div class="content-card-body">
+        <form method="POST" action="{{ url_for('milk.quick_entry') }}">
+          <!-- Session Setup Header -->
+          <div class="p-3 bg-light rounded-3 border mb-4">
+            <div class="row g-3 align-items-center">
+              <div class="col-md-4">
+                <label class="form-label fw-bold">Milking Date *</label>
+                <input type="date" name="entry_date" class="form-control" value="{{ today }}" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold">Session *</label>
+                <select name="session" class="form-select" required>
+                  <option value="Morning" selected>Morning Session</option>
+                  <option value="Evening">Evening Session</option>
+                  <option value="Afternoon">Afternoon Session</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-bold">Base Rate / Liter (₹)</label>
+                <input type="number" step="0.5" name="default_rate" class="form-control" value="40.0">
+              </div>
+            </div>
+          </div>
+
+          <h6 class="fw-bold mb-3 text-dark">
+            <i class="fa-solid fa-cow text-primary me-2"></i> Milking Cattle Grid ({{ milking_cows|length }} Active Cattle)
+          </h6>
+          <p class="text-muted small mb-3">Enter yield (Liters) for each cattle below. Leave empty if a cattle was not milked in this session.</p>
+
+          <div class="table-responsive mb-4">
+            <table class="table custom-table align-middle">
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Cattle Tag & Name</th>
+                  <th style="width: 20%;">Breed & Species</th>
+                  <th style="width: 25%;">Quantity (Liters)</th>
+                  <th style="width: 15%;">Fat %</th>
+                  <th style="width: 15%;">SNF %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for a in milking_cows %}
+                  <tr>
+                    <td>
+                      <div class="fw-bold text-primary">{{ a.tag_number }}</div>
+                      <div class="small text-muted">{{ a.name or 'No Nickname' }}</div>
+                    </td>
+                    <td>
+                      <div>{{ a.breed }}</div>
+                      <div class="small text-muted">{{ a.species }}</div>
+                    </td>
+                    <td>
+                      <div class="input-group">
+                        <input type="number" step="0.1" min="0" name="qty_{{ a.id }}" class="form-control fw-bold" placeholder="0.0">
+                        <span class="input-group-text bg-light text-muted">L</span>
+                      </div>
+                    </td>
+                    <td>
+                      <input type="number" step="0.1" name="fat_{{ a.id }}" class="form-control" placeholder="4.0" value="4.0">
+                    </td>
+                    <td>
+                      <input type="number" step="0.1" name="snf_{{ a.id }}" class="form-control" placeholder="8.5" value="8.5">
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">
+                      No cattle are currently marked with milking status 'Milking'.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 border-top pt-3">
+            <a href="{{ url_for('milk.milk_list') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-custom-primary">
+              <i class="fa-solid fa-floppy-disk me-1"></i> Save All Batch Entries
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

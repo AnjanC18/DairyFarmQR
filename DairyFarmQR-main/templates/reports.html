@@ -1,0 +1,284 @@
+{% extends "layout.html" %}
+
+{% block title %}Reports & Financial Analytics - Smart Dairy Farm{% endblock %}
+{% block page_title %}Comprehensive Farm Reports & Analytics{% endblock %}
+
+{% block content %}
+<!-- Header & Filter Row -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Production & Financial Analytics</h4>
+    <p class="text-muted small mb-0">Period: <strong>{{ start_date }}</strong> to <strong>{{ end_date }}</strong></p>
+  </div>
+  <div class="d-flex gap-2 no-print">
+    <button onclick="window.print()" class="btn btn-outline-dark">
+      <i class="fa-solid fa-print me-1"></i> Print Report
+    </button>
+  </div>
+</div>
+
+<!-- Date Range Picker Card -->
+<div class="content-card mb-4 no-print">
+  <div class="content-card-body p-3">
+    <form method="GET" action="{{ url_for('report.reports') }}" class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <label class="form-label small fw-bold mb-1">Start Date</label>
+        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}" required>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label small fw-bold mb-1">End Date</label>
+        <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}" required>
+      </div>
+      <div class="col-md-2 d-flex gap-2 align-items-end">
+        <button type="submit" class="btn btn-sm btn-primary flex-grow-1"><i class="fa-solid fa-chart-pie me-1"></i> Generate</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Financial & Production Summary Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-3 col-sm-6">
+    <div class="stat-card" style="--card-accent: #2563eb;">
+      <div>
+        <div class="stat-label">Total Milk Yield</div>
+        <div class="stat-value text-primary">{{ total_milk_qty }} <span class="fs-6 text-muted">L</span></div>
+        <div class="small text-muted mt-1">Avg: <strong>{{ avg_daily_milk }} L/day</strong> (Fat: {{ avg_fat }}%)</div>
+      </div>
+      <div class="stat-icon primary"><i class="fa-solid fa-bottle-droplet"></i></div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-sm-6">
+    <div class="stat-card" style="--card-accent: #10b981;">
+      <div>
+        <div class="stat-label">Total Milk Revenue</div>
+        <div class="stat-value text-success">₹{{ total_milk_revenue }}</div>
+        <div class="small text-muted mt-1">Gross sales valuation</div>
+      </div>
+      <div class="stat-icon success"><i class="fa-solid fa-wallet"></i></div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-sm-6">
+    <div class="stat-card" style="--card-accent: #ef4444;">
+      <div>
+        <div class="stat-label">Operating Expenses</div>
+        <div class="stat-value text-danger">₹{{ total_expense }}</div>
+        <div class="small text-muted mt-1">Feed, Vet, Labor, Utilities</div>
+      </div>
+      <div class="stat-icon danger"><i class="fa-solid fa-arrow-trend-down"></i></div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-sm-6">
+    <div class="stat-card" style="--card-accent: {% if net_profit >= 0 %}#10b981{% else %}#ef4444{% endif %};">
+      <div>
+        <div class="stat-label">Net Farm Margin</div>
+        <div class="stat-value {% if net_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+          {% if net_profit >= 0 %}+{% endif %}₹{{ net_profit }}
+        </div>
+        <div class="small text-muted mt-1">
+          Revenue - Expenses: <strong>{% if net_profit >= 0 %}Profit{% else %}Loss{% endif %}</strong>
+        </div>
+      </div>
+      <div class="stat-icon {% if net_profit >= 0 %}success{% else %}danger{% endif %}">
+        <i class="fa-solid fa-scale-balanced"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+  <!-- Revenue vs Expense Trend -->
+  <div class="col-xl-8">
+    <div class="content-card h-100">
+      <div class="content-card-header">
+        <h5 class="content-card-title"><i class="fa-solid fa-chart-line text-primary"></i> Daily Revenue (₹) vs Expenses (₹)</h5>
+      </div>
+      <div class="content-card-body">
+        <div style="height: 320px;">
+          <canvas id="financialTrendChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expense Distribution Pie -->
+  <div class="col-xl-4">
+    <div class="content-card h-100">
+      <div class="content-card-header">
+        <h5 class="content-card-title"><i class="fa-solid fa-chart-pie text-secondary"></i> Expense Breakdown</h5>
+      </div>
+      <div class="content-card-body d-flex flex-column justify-content-center">
+        <div style="height: 250px; position: relative;">
+          <canvas id="expensePieChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Top Yielding Cattle Leaderboard -->
+<div class="row g-4">
+  <div class="col-xl-6">
+    <div class="content-card h-100">
+      <div class="content-card-header">
+        <h5 class="content-card-title"><i class="fa-solid fa-trophy text-warning"></i> Top 5 Milk Producing Cattle</h5>
+      </div>
+      <div class="content-card-body">
+        <div style="height: 260px;">
+          <canvas id="topProducersChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-6">
+    <div class="content-card h-100">
+      <div class="content-card-header">
+        <h5 class="content-card-title"><i class="fa-solid fa-ranking-star text-primary"></i> Performance Leaderboard</h5>
+      </div>
+      <div class="content-card-body p-0">
+        <div class="table-responsive">
+          <table class="table custom-table align-middle">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Cattle Tag / Name</th>
+                <th>Breed</th>
+                <th>Total Yield</th>
+                <th>Daily Avg</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in top_animals %}
+                <tr>
+                  <td>
+                    {% if loop.index == 1 %}
+                      <span class="badge bg-warning text-dark"><i class="fa-solid fa-crown"></i> #1</span>
+                    {% elif loop.index == 2 %}
+                      <span class="badge bg-secondary">#2</span>
+                    {% elif loop.index == 3 %}
+                      <span class="badge bg-light text-dark border">#3</span>
+                    {% else %}
+                      <span class="text-muted fw-bold">#{{ loop.index }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <a href="{{ url_for('animal.animal_detail', id=item.animal.id) }}" class="fw-bold text-primary text-decoration-none">
+                      {{ item.animal.tag_number }}
+                    </a>
+                    <div class="small text-muted">{{ item.animal.name or 'No Nickname' }}</div>
+                  </td>
+                  <td>{{ item.animal.breed }} ({{ item.animal.species }})</td>
+                  <td class="fw-bold text-success fs-6">{{ item.total_yield }} L</td>
+                  <td class="fw-bold text-dark">{{ item.avg_daily }} L</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="5" class="text-center py-4 text-muted">No production data in selected timeframe.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Financial Revenue vs Expense Line Chart
+  const ctxFin = document.getElementById('financialTrendChart').getContext('2d');
+  new Chart(ctxFin, {
+    type: 'line',
+    data: {
+      labels: {{ trend_dates | tojson }},
+      datasets: [
+        {
+          label: 'Milk Revenue (₹)',
+          data: {{ trend_revenue | tojson }},
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 2
+        },
+        {
+          label: 'Operating Expenses (₹)',
+          data: {{ trend_expense | tojson }},
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, title: { display: true, text: 'Amount (₹)' } }
+      }
+    }
+  });
+
+  // Expense Category Donut
+  const ctxExp = document.getElementById('expensePieChart').getContext('2d');
+  new Chart(ctxExp, {
+    type: 'doughnut',
+    data: {
+      labels: {{ expense_categories | tojson }},
+      datasets: [{
+        data: {{ expense_cat_amounts | tojson }},
+        backgroundColor: [
+          '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#64748b'
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' }
+      }
+    }
+  });
+
+  // Top Producers Bar Chart
+  const ctxTop = document.getElementById('topProducersChart').getContext('2d');
+  new Chart(ctxTop, {
+    type: 'bar',
+    data: {
+      labels: {{ top_animal_labels | tojson }},
+      datasets: [{
+        label: 'Total Liters (L)',
+        data: {{ top_animal_data | tojson }},
+        backgroundColor: '#2563eb',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: { beginAtZero: true, title: { display: true, text: 'Yield (Liters)' } }
+      }
+    }
+  });
+</script>
+{% endblock %}

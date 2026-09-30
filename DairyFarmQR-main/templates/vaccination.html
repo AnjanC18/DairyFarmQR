@@ -1,0 +1,232 @@
+{% extends "layout.html" %}
+
+{% block title %}Vaccinations & Cattle Health - Smart Dairy Farm{% endblock %}
+{% block page_title %}Vaccination Schedule & Health Records{% endblock %}
+
+{% block content %}
+<!-- Header & Action Row -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Cattle Vaccination & Immunization Tracker</h4>
+    <p class="text-muted small mb-0">Manage FMD, Brucellosis, Blackleg, and preventive healthcare schedules.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button type="button" class="btn btn-custom-primary" data-bs-toggle="modal" data-bs-target="#addVaccineModal">
+      <i class="fa-solid fa-plus me-1"></i> Add Vaccination Entry
+    </button>
+  </div>
+</div>
+
+<!-- Vaccine Status KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="stat-card" style="--card-accent: #ef4444;">
+      <div>
+        <div class="stat-label">Overdue Vaccinations</div>
+        <div class="stat-value text-danger">{{ overdue_count }}</div>
+        <div class="small text-muted mt-1">Requires immediate vet attention</div>
+      </div>
+      <div class="stat-icon danger"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    </div>
+  </div>
+
+  <div class="col-sm-4">
+    <div class="stat-card" style="--card-accent: #2563eb;">
+      <div>
+        <div class="stat-label">Upcoming (Next 14 Days)</div>
+        <div class="stat-value text-primary">{{ upcoming_count }}</div>
+        <div class="small text-muted mt-1">Scheduled boosters</div>
+      </div>
+      <div class="stat-icon primary"><i class="fa-solid fa-calendar-check"></i></div>
+    </div>
+  </div>
+
+  <div class="col-sm-4">
+    <div class="stat-card" style="--card-accent: #10b981;">
+      <div>
+        <div class="stat-label">Completed Vaccines</div>
+        <div class="stat-value text-success">{{ completed_count }}</div>
+        <div class="small text-muted mt-1">Safely immunized records</div>
+      </div>
+      <div class="stat-icon success"><i class="fa-solid fa-shield-halved"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="content-card mb-4">
+  <div class="content-card-body p-3">
+    <form method="GET" action="{{ url_for('vaccination.vaccination_list') }}" class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <label class="form-label small fw-bold mb-1">Filter by Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All Statuses</option>
+          <option value="Overdue" {% if selected_status == 'Overdue' %}selected{% endif %}>Overdue (Action Needed)</option>
+          <option value="Upcoming" {% if selected_status == 'Upcoming' %}selected{% endif %}>Upcoming</option>
+          <option value="Completed" {% if selected_status == 'Completed' %}selected{% endif %}>Completed</option>
+        </select>
+      </div>
+      <div class="col-md-5">
+        <label class="form-label small fw-bold mb-1">Filter by Cattle</label>
+        <select name="animal_id" class="form-select form-select-sm">
+          <option value="">All Cattle</option>
+          {% for a in animals %}
+            <option value="{{ a.id }}" {% if selected_animal == a.id|string %}selected{% endif %}>
+              {{ a.tag_number }} - {{ a.name or a.breed }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-2 align-items-end">
+        <button type="submit" class="btn btn-sm btn-primary flex-grow-1"><i class="fa-solid fa-filter me-1"></i> Filter</button>
+        <a href="{{ url_for('vaccination.vaccination_list') }}" class="btn btn-sm btn-light border" title="Reset"><i class="fa-solid fa-rotate-left"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Vaccinations Table -->
+<div class="content-card">
+  <div class="content-card-header">
+    <h5 class="content-card-title"><i class="fa-solid fa-syringe text-primary"></i> Immunization & Healthcare Register</h5>
+    <span class="badge bg-primary rounded-pill">{{ vaccinations|length }} Records</span>
+  </div>
+  <div class="content-card-body p-0">
+    <div class="table-responsive">
+      <table class="table custom-table searchable-table align-middle">
+        <thead>
+          <tr>
+            <th>Cattle Tag / Name</th>
+            <th>Vaccine / Disease</th>
+            <th>Administered Date</th>
+            <th>Next Due Date</th>
+            <th>Veterinarian</th>
+            <th>Status</th>
+            <th>Remarks</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in vaccinations %}
+            <tr>
+              <td>
+                <a href="{{ url_for('animal.animal_detail', id=v.animal_id) }}" class="fw-bold text-primary text-decoration-none">
+                  {{ v.animal.tag_number }}
+                </a>
+                <div class="small text-muted">{{ v.animal.name or v.animal.breed }} ({{ v.animal.species }})</div>
+              </td>
+              <td class="fw-bold text-dark">{{ v.vaccine_name }}</td>
+              <td>{{ v.administered_date.strftime('%d %b %Y') }}</td>
+              <td class="fw-bold {% if v.status == 'Overdue' %}text-danger{% endif %}">
+                {{ v.next_due_date.strftime('%d %b %Y') }}
+              </td>
+              <td>{{ v.veterinarian or 'N/A' }}</td>
+              <td>
+                {% if v.status == 'Completed' %}
+                  <span class="badge-status badge-completed"><i class="fa-solid fa-circle-check"></i> Completed</span>
+                {% elif v.status == 'Overdue' %}
+                  <span class="badge-status badge-overdue"><i class="fa-solid fa-triangle-exclamation"></i> Overdue</span>
+                {% else %}
+                  <span class="badge-status badge-upcoming"><i class="fa-solid fa-clock"></i> Upcoming</span>
+                {% endif %}
+              </td>
+              <td class="small text-muted">{{ v.remarks or '-' }}</td>
+              <td class="text-end">
+                <div class="btn-group">
+                  {% if v.status != 'Completed' %}
+                    <form method="POST" action="{{ url_for('vaccination.mark_done', id=v.id) }}" class="d-inline">
+                      <button type="submit" class="btn btn-sm btn-outline-success" title="Mark as Administered">
+                        <i class="fa-solid fa-check"></i>
+                      </button>
+                    </form>
+                  {% endif %}
+                  <form method="POST" action="{{ url_for('vaccination.delete_vaccination', id=v.id) }}" class="d-inline ms-1" onsubmit="return confirm('Delete vaccination entry?');">
+                    <button type="submit" class="btn btn-sm btn-light border text-danger" title="Delete">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="8" class="text-center py-5 text-muted">
+                <i class="fa-solid fa-shield-virus fs-1 mb-3 text-muted d-block"></i>
+                <h5>No Vaccination Records Found</h5>
+                <p class="small">Add upcoming or completed vaccine logs for your cattle.</p>
+                <button type="button" class="btn btn-sm btn-custom-primary mt-2" data-bs-toggle="modal" data-bs-target="#addVaccineModal">
+                  <i class="fa-solid fa-plus me-1"></i> Add Vaccination Entry
+                </button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add Vaccination Modal -->
+<div class="modal fade" id="addVaccineModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="fa-solid fa-syringe text-primary me-2"></i> Add Vaccination Record</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('vaccination.add_vaccination') }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-bold">Select Cattle *</label>
+            <select name="animal_id" class="form-select" required>
+              <option value="">-- Choose Cattle Tag --</option>
+              {% for a in animals %}
+                <option value="{{ a.id }}">{{ a.tag_number }} - {{ a.name or a.breed }} ({{ a.species }})</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Vaccine / Disease Name *</label>
+            <input type="text" name="vaccine_name" class="form-control" placeholder="e.g. FMD (Foot & Mouth), Brucellosis, Blackleg, Anthrax" required>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-bold">Date Given</label>
+              <input type="date" name="administered_date" class="form-control" value="{{ today }}">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-bold">Next Due Date *</label>
+              <input type="date" name="next_due_date" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label fw-bold">Status *</label>
+              <select name="status" class="form-select" required>
+                <option value="Completed" selected>Completed</option>
+                <option value="Upcoming">Upcoming</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-bold">Veterinarian</label>
+              <input type="text" name="veterinarian" class="form-control" placeholder="Dr. Name">
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-bold">Remarks / Batch Number</label>
+            <input type="text" name="remarks" class="form-control" placeholder="Optional dosage details or vaccine batch">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-custom-primary"><i class="fa-solid fa-check me-1"></i> Save Vaccination</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
