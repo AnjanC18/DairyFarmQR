@@ -200,5 +200,47 @@ class DairyAppTestCase(unittest.TestCase):
             self.assertIn(b'Welcome back', email_resp.data)
             print("[PASSED] Cross-device staff, manager, and admin authentication (case-insensitive username/email) verified.")
 
+    def test_09_manager_vaccination_mark_done_and_scan_integration(self):
+        with self.client:
+            # 1. Login as Manager
+            self.client.post('/login', data={'username': 'manager', 'password': 'manager123'}, follow_redirects=True)
+
+            # 2. QR scan lookup returns animal with vaccinations and is_manager=True
+            scan_res = self.client.get('/api/qr/lookup/DF-101')
+            self.assertEqual(scan_res.status_code, 200)
+            data = scan_res.get_json()
+            self.assertTrue(data['success'])
+            self.assertTrue(data['is_manager'])
+            self.assertIn('vaccinations', data['animal'])
+
+            # 3. Manager quick adds a vaccination from QR scan
+            quick_add_res = self.client.post('/api/vaccinations/quick-add', json={
+                'animal_id': data['animal']['id'],
+                'vaccine_name': 'Foot and Mouth Disease (FMD)',
+                'next_due_days': 180,
+                'remarks': 'Administered during scan test'
+            })
+            self.assertEqual(quick_add_res.status_code, 200)
+            add_data = quick_add_res.get_json()
+            self.assertTrue(add_data['success'])
+            new_vax_id = add_data['vaccination']['id']
+            print(f"[PASSED] Manager successfully administered & recorded vaccine id {new_vax_id} via scan interface.")
+
+            # 4. Manager marks a vaccination as done
+            mark_done_res = self.client.post(f'/api/vaccinations/mark-done/{new_vax_id}')
+            self.assertEqual(mark_done_res.status_code, 200)
+            done_data = mark_done_res.get_json()
+            self.assertTrue(done_data['success'])
+            self.assertEqual(done_data['vaccination']['status'], 'Completed')
+            print(f"[PASSED] Manager marked vaccine {new_vax_id} as DONE successfully.")
+
+            # 5. Logout manager & login as staff to verify authorization protection
+            self.client.get('/logout', follow_redirects=True)
+            self.client.post('/login', data={'username': 'staff', 'password': 'staff123'}, follow_redirects=True)
+
+            staff_mark_res = self.client.post(f'/api/vaccinations/mark-done/{new_vax_id}')
+            self.assertEqual(staff_mark_res.status_code, 403)
+            print("[PASSED] Staff prevented from marking vaccination as done (403 Forbidden).")
+
 if __name__ == '__main__':
     unittest.main()

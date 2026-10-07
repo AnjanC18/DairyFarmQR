@@ -223,7 +223,7 @@
       <!-- Vaccination Tab -->
       <div class="tab-pane fade" id="vaccine-pane" role="tabpanel">
         <div class="table-responsive">
-          <table class="table custom-table mb-0">
+          <table class="table custom-table align-middle mb-0">
             <thead>
               <tr>
                 <th>Vaccine / Disease</th>
@@ -232,6 +232,9 @@
                 <th>Veterinarian</th>
                 <th>Status</th>
                 <th>Remarks</th>
+                {% if current_user.is_manager() %}
+                <th class="text-end">Action</th>
+                {% endif %}
               </tr>
             </thead>
             <tbody>
@@ -243,18 +246,31 @@
                   <td>{{ v.veterinarian or 'N/A' }}</td>
                   <td>
                     {% if v.status == 'Completed' %}
-                      <span class="badge-status badge-completed">Completed</span>
+                      <span class="badge-status badge-completed"><i class="fa-solid fa-check me-1"></i> Completed</span>
                     {% elif v.status == 'Overdue' %}
-                      <span class="badge-status badge-overdue">Overdue</span>
+                      <span class="badge-status badge-overdue"><i class="fa-solid fa-triangle-exclamation me-1"></i> Overdue</span>
                     {% else %}
-                      <span class="badge-status badge-upcoming">Upcoming</span>
+                      <span class="badge-status badge-upcoming"><i class="fa-solid fa-clock me-1"></i> Upcoming</span>
                     {% endif %}
                   </td>
                   <td class="small text-muted">{{ v.remarks or '-' }}</td>
+                  {% if current_user.is_manager() %}
+                  <td class="text-end">
+                    {% if v.status != 'Completed' %}
+                    <form method="POST" action="{{ url_for('vaccination.mark_done', id=v.id) }}" class="d-inline" onsubmit="return confirm('Mark {{ v.vaccine_name }} as administered today?');">
+                      <button type="submit" class="btn btn-sm btn-success fw-bold py-1 px-2" title="Mark Administered Today">
+                        <i class="fa-solid fa-check me-1"></i> Mark Done
+                      </button>
+                    </form>
+                    {% else %}
+                    <span class="text-muted small"><i class="fa-solid fa-circle-check text-success me-1"></i> Done</span>
+                    {% endif %}
+                  </td>
+                  {% endif %}
                 </tr>
               {% else %}
                 <tr>
-                  <td colspan="6" class="text-center py-4 text-muted">No vaccination history recorded for this animal.</td>
+                  <td colspan="{% if current_user.is_manager() %}7{% else %}6{% endif %}" class="text-center py-4 text-muted">No vaccination history recorded for this animal.</td>
                 </tr>
               {% endfor %}
             </tbody>

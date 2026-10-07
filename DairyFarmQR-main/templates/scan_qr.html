@@ -151,6 +151,47 @@
           </div>
         </div>
 
+        <!-- Vaccination & Immunization Status & Manager Mark as Done Section -->
+        <div class="p-3 bg-light rounded-3 mb-3 border">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold mb-0 text-dark">
+              <i class="fa-solid fa-syringe text-danger me-1"></i> Health & Vaccination Status
+            </h6>
+            <span id="vaxSummaryBadge" class="badge bg-secondary">Checking...</span>
+          </div>
+
+          <!-- List of Vaccinations for Scanned Cattle -->
+          <div id="vaxListContainer" class="d-flex flex-column gap-2 mb-2">
+            <div class="text-muted small text-center py-2">No vaccination records found.</div>
+          </div>
+
+          <!-- Quick Administer / Mark Done Form for Manager & Admin -->
+          <div id="managerVaxSection" class="mt-3 pt-2 border-top d-none">
+            <div class="small fw-bold text-dark mb-2">
+              <i class="fa-solid fa-shield-virus text-success me-1"></i> Administer / Record Vaccine for This Cattle:
+            </div>
+            <div class="row g-2 align-items-center">
+              <div class="col-8">
+                <select id="quickVaxName" class="form-select form-select-sm">
+                  <option value="Foot and Mouth Disease (FMD)">Foot & Mouth Disease (FMD)</option>
+                  <option value="Black Quarter (BQ)">Black Quarter (BQ)</option>
+                  <option value="Hemorrhagic Septicemia (HS)">Hemorrhagic Septicemia (HS)</option>
+                  <option value="Brucellosis Vaccine">Brucellosis Vaccine</option>
+                  <option value="Anthrax Spore Vaccine">Anthrax Spore Vaccine</option>
+                  <option value="Deworming & Vitamin Booster">Deworming & Vitamin Booster</option>
+                  <option value="Lumpy Skin Disease (LSD)">Lumpy Skin Disease (LSD)</option>
+                </select>
+              </div>
+              <div class="col-4">
+                <button type="button" id="recordVaxBtn" class="btn btn-sm btn-success w-100 fw-bold">
+                  <i class="fa-solid fa-check me-1"></i> Mark Done
+                </button>
+              </div>
+            </div>
+            <div id="vaxActionAlert" class="alert alert-success py-2 px-3 small mt-2 d-none"></div>
+          </div>
+        </div>
+
         <div class="d-grid gap-2">
           <a id="logMilkLink" href="#" class="btn btn-custom-primary">
             <i class="fa-solid fa-glass-water me-1"></i> Log Milk For This Cattle
@@ -171,6 +212,7 @@
 {% block extra_scripts %}
 <script>
   let html5QrCode = null;
+  let currentScannedAnimalId = null;
   const startBtn = document.getElementById('startScanBtn');
   const stopBtn = document.getElementById('stopScanBtn');
   const liveWrapper = document.getElementById('liveScannerWrapper');
@@ -183,6 +225,12 @@
   const previewContainer = document.getElementById('previewContainer');
   const previewImg = document.getElementById('previewImg');
   const qrCanvas = document.getElementById('qrCanvas');
+  const vaxListContainer = document.getElementById('vaxListContainer');
+  const vaxSummaryBadge = document.getElementById('vaxSummaryBadge');
+  const managerVaxSection = document.getElementById('managerVaxSection');
+  const recordVaxBtn = document.getElementById('recordVaxBtn');
+  const quickVaxName = document.getElementById('quickVaxName');
+  const vaxActionAlert = document.getElementById('vaxActionAlert');
 
   function showProcessing(show) {
     if (processingIndicator) {
@@ -194,12 +242,167 @@
   function cleanTagText(rawText) {
     if (!rawText) return '';
     rawText = rawText.trim();
-    // If it's a URL (e.g. http://.../animals/1 or DF-101)
     if (rawText.includes('/animals/')) {
       const parts = rawText.split('/animals/');
       return parts[parts.length - 1].replace(/[^a-zA-Z0-9_-]/g, '');
     }
     return rawText;
+  }
+
+  function renderVaccinations(vaccinations, isManager, animalId) {
+    vaxListContainer.innerHTML = '';
+    
+    if (!vaccinations || vaccinations.length === 0) {
+      vaxSummaryBadge.className = 'badge bg-secondary';
+      vaxSummaryBadge.textContent = 'No Schedule';
+      vaxListContainer.innerHTML = '<div class="text-muted small text-center py-2"><i class="fa-solid fa-circle-info me-1"></i> No upcoming vaccination scheduled for this cattle.</div>';
+    } else {
+      let pendingCount = 0;
+      let overdueCount = 0;
+
+      vaccinations.forEach(v => {
+        const item = document.createElement('div');
+        item.className = 'p-2 rounded border bg-white d-flex flex-wrap justify-content-between align-items-center gap-2';
+        item.id = `vaxItem-${v.id}`;
+
+        let statusBadge = '';
+        let actionBtn = '';
+
+        if (v.status === 'Completed') {
+          statusBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fa-solid fa-check me-1"></i> Done (${v.administered_date})</span>`;
+        } else if (v.status === 'Overdue' || v.is_overdue) {
+          overdueCount++;
+          statusBadge = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="fa-solid fa-triangle-exclamation me-1"></i> Overdue (Due: ${v.next_due_date})</span>`;
+          if (isManager) {
+            actionBtn = `<button type="button" class="btn btn-xs btn-success fw-bold py-1 px-2" onclick="markVaccineDone(${v.id}, '${v.vaccine_name}')"><i class="fa-solid fa-check me-1"></i> Mark Done</button>`;
+          }
+        } else {
+          pendingCount++;
+          statusBadge = `<span class="badge bg-warning-subtle text-warning border border-warning-subtle text-dark"><i class="fa-solid fa-clock me-1"></i> Due: ${v.next_due_date}</span>`;
+          if (isManager) {
+            actionBtn = `<button type="button" class="btn btn-xs btn-success fw-bold py-1 px-2" onclick="markVaccineDone(${v.id}, '${v.vaccine_name}')"><i class="fa-solid fa-check me-1"></i> Mark Done</button>`;
+          }
+        }
+
+        item.innerHTML = `
+          <div>
+            <div class="fw-bold text-dark small"><i class="fa-solid fa-shield-halved text-primary me-1"></i> ${v.vaccine_name}</div>
+            <div class="text-muted" style="font-size: 0.75rem;">Vet: ${v.veterinarian} ${v.remarks ? '&bull; ' + v.remarks : ''}</div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            ${statusBadge}
+            ${actionBtn}
+          </div>
+        `;
+        vaxListContainer.appendChild(item);
+      });
+
+      if (overdueCount > 0) {
+        vaxSummaryBadge.className = 'badge bg-danger';
+        vaxSummaryBadge.textContent = `${overdueCount} Overdue`;
+      } else if (pendingCount > 0) {
+        vaxSummaryBadge.className = 'badge bg-warning text-dark';
+        vaxSummaryBadge.textContent = `${pendingCount} Upcoming`;
+      } else {
+        vaxSummaryBadge.className = 'badge bg-success';
+        vaxSummaryBadge.textContent = 'Up to Date';
+      }
+    }
+
+    // Toggle manager administer section
+    if (isManager) {
+      managerVaxSection.classList.remove('d-none');
+    } else {
+      managerVaxSection.classList.add('d-none');
+    }
+  }
+
+  window.markVaccineDone = function(vaxId, vaccineName) {
+    if (!confirm(`Mark "${vaccineName}" as administered today for this cattle?`)) return;
+
+    fetch(`/api/vaccinations/mark-done/${vaxId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        const item = document.getElementById(`vaxItem-${vaxId}`);
+        if (item) {
+          item.classList.add('border-success', 'bg-success-subtle');
+          item.innerHTML = `
+            <div>
+              <div class="fw-bold text-success small"><i class="fa-solid fa-circle-check me-1"></i> ${data.vaccination.vaccine_name}</div>
+              <div class="text-muted" style="font-size: 0.75rem;">Administered today by ${data.vaccination.veterinarian} &bull; Next Booster: ${data.vaccination.next_due_date}</div>
+            </div>
+            <span class="badge bg-success text-white"><i class="fa-solid fa-check me-1"></i> Completed</span>
+          `;
+        }
+        if (vaxActionAlert) {
+          vaxActionAlert.textContent = data.message;
+          vaxActionAlert.classList.remove('d-none');
+          setTimeout(() => vaxActionAlert.classList.add('d-none'), 5000);
+        }
+      } else {
+        alert(data.message || 'Error updating vaccination.');
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Could not update vaccination.');
+    });
+  };
+
+  // Manager quick-add new vaccination on the spot
+  if (recordVaxBtn) {
+    recordVaxBtn.addEventListener('click', function() {
+      if (!currentScannedAnimalId) {
+        alert('No cattle selected.');
+        return;
+      }
+      const vName = quickVaxName.value;
+      recordVaxBtn.disabled = true;
+
+      fetch('/api/vaccinations/quick-add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          animal_id: currentScannedAnimalId,
+          vaccine_name: vName,
+          next_due_days: 180,
+          remarks: 'Administered on-the-spot via QR Scan'
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        recordVaxBtn.disabled = false;
+        if (data.success) {
+          if (vaxActionAlert) {
+            vaxActionAlert.textContent = data.message;
+            vaxActionAlert.classList.remove('d-none');
+            setTimeout(() => vaxActionAlert.classList.add('d-none'), 5000);
+          }
+          // Prepend newly completed vaccine to list
+          const newItem = document.createElement('div');
+          newItem.className = 'p-2 rounded border border-success bg-success-subtle d-flex flex-wrap justify-content-between align-items-center gap-2';
+          newItem.innerHTML = `
+            <div>
+              <div class="fw-bold text-success small"><i class="fa-solid fa-circle-check me-1"></i> ${data.vaccination.vaccine_name}</div>
+              <div class="text-muted" style="font-size: 0.75rem;">Administered today &bull; Next Booster: ${data.vaccination.next_due_date}</div>
+            </div>
+            <span class="badge bg-success text-white"><i class="fa-solid fa-check me-1"></i> Completed</span>
+          `;
+          vaxListContainer.prepend(newItem);
+        } else {
+          alert(data.message || 'Error recording vaccine.');
+        }
+      })
+      .catch(err => {
+        recordVaxBtn.disabled = false;
+        console.error(err);
+        alert('Could not record vaccination.');
+      });
+    });
   }
 
   function lookupAnimal(tag) {
@@ -213,6 +416,7 @@
         showProcessing(false);
         if (data.success) {
           const a = data.animal;
+          currentScannedAnimalId = a.id;
           document.getElementById('resultTag').textContent = a.tag_number;
           document.getElementById('resultNameBreed').textContent = `${a.name || 'Unnamed'} • ${a.breed} (${a.gender})`;
           document.getElementById('resultSpecies').textContent = a.species;
@@ -226,6 +430,9 @@
           } else {
             document.getElementById('resultLastMilk').textContent = 'No previous records';
           }
+
+          // Render Vaccinations & Manager Actions
+          renderVaccinations(a.vaccinations, data.is_manager, a.id);
 
           document.getElementById('logMilkLink').href = `/milk?animal_id=${a.id}`;
           document.getElementById('viewProfileLink').href = `/animals/${a.id}`;
