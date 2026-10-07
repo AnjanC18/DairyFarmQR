@@ -8,13 +8,15 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
   <div>
     <h4 class="fw-bold mb-1">Cattle Master Register</h4>
-    <p class="text-muted small mb-0">Total of {{ total_count }} animals registered in your farm.</p>
+    <p class="text-muted small mb-0">Total {{ total_count }} cattle in farm &bull; Showing 10 records per page</p>
   </div>
+  {% if current_user.is_manager() %}
   <div class="d-flex gap-2">
     <a href="{{ url_for('animal.add_animal') }}" class="btn btn-custom-primary">
       <i class="fa-solid fa-plus me-1"></i> Register New Cattle
     </a>
   </div>
+  {% endif %}
 </div>
 
 <!-- Filter Pills & Search Bar -->
@@ -24,10 +26,10 @@
       <div class="col-md-4">
         <div class="input-group">
           <span class="input-group-text bg-light"><i class="fa-solid fa-search text-muted"></i></span>
-          <input type="text" name="search" class="form-control" placeholder="Search by Tag Number, Name, Breed..." value="{{ search }}">
+          <input type="text" name="search" id="cattleSearchInput" class="form-control" placeholder="Search by Tag, Name, Breed..." value="{{ search }}" autocomplete="off">
         </div>
       </div>
-      <div class="col-md-2">
+      <div class="col-md-2 col-6">
         <select name="species" class="form-select">
           <option value="">All Species</option>
           <option value="Cow" {% if selected_species == 'Cow' %}selected{% endif %}>Cow</option>
@@ -35,7 +37,7 @@
           <option value="Goat" {% if selected_species == 'Goat' %}selected{% endif %}>Goat</option>
         </select>
       </div>
-      <div class="col-md-2">
+      <div class="col-md-2 col-6">
         <select name="status" class="form-select">
           <option value="">All Statuses</option>
           <option value="Milking" {% if selected_status == 'Milking' %}selected{% endif %}>Milking</option>
@@ -45,7 +47,7 @@
           <option value="Calf" {% if selected_status == 'Calf' %}selected{% endif %}>Calf</option>
         </select>
       </div>
-      <div class="col-md-2">
+      <div class="col-md-2 col-6">
         <select name="health" class="form-select">
           <option value="">Health Condition</option>
           <option value="Healthy" {% if selected_health == 'Healthy' %}selected{% endif %}>Healthy</option>
@@ -53,7 +55,7 @@
           <option value="Quarantined" {% if selected_health == 'Quarantined' %}selected{% endif %}>Quarantined</option>
         </select>
       </div>
-      <div class="col-md-2 d-flex gap-2">
+      <div class="col-md-2 col-6 d-flex gap-2">
         <button type="submit" class="btn btn-primary flex-grow-1"><i class="fa-solid fa-filter me-1"></i> Filter</button>
         <a href="{{ url_for('animal.list_animals') }}" class="btn btn-light border"><i class="fa-solid fa-rotate-left"></i></a>
       </div>
@@ -67,7 +69,7 @@
     <h5 class="content-card-title">
       <i class="fa-solid fa-list text-primary"></i> Registered Cattle List
     </h5>
-    <span class="badge bg-primary rounded-pill">{{ animals|length }} Records</span>
+    <span class="badge bg-primary rounded-pill">Page {{ pagination.page }} of {{ pagination.pages or 1 }} ({{ pagination.total }} Cattle)</span>
   </div>
   <div class="content-card-body p-0">
     <div class="table-responsive">
@@ -166,14 +168,16 @@
                   <a href="{{ url_for('animal.animal_detail', id=a.id) }}" class="btn btn-sm btn-light border" title="View Full Profile">
                     <i class="fa-solid fa-eye text-primary"></i>
                   </a>
+                  {% if current_user.is_manager() %}
                   <a href="{{ url_for('animal.edit_animal', id=a.id) }}" class="btn btn-sm btn-light border" title="Edit Cattle">
                     <i class="fa-solid fa-pen-to-square text-secondary"></i>
                   </a>
-                  <form method="POST" action="{{ url_for('animal.delete_animal', id=a.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete cattle {{ a.tag_number }}?');">
+                  <form method="POST" action="{{ url_for('animal.delete_animal', id=a.id) }}" class="d-inline" onsubmit="return confirm('Delete cattle {{ a.tag_number }}?');">
                     <button type="submit" class="btn btn-sm btn-light border text-danger" title="Delete Cattle">
                       <i class="fa-solid fa-trash"></i>
                     </button>
                   </form>
+                  {% endif %}
                 </div>
               </td>
             </tr>
@@ -182,16 +186,55 @@
               <td colspan="8" class="text-center py-5 text-muted">
                 <i class="fa-solid fa-cow fs-1 mb-3 text-muted d-block"></i>
                 <h5>No Cattle Records Found</h5>
-                <p class="small">Try changing your filters or add a new animal to the register.</p>
+                <p class="small">Try changing your search filters or register a new cattle.</p>
+                {% if current_user.is_manager() %}
                 <a href="{{ url_for('animal.add_animal') }}" class="btn btn-sm btn-custom-primary mt-2">
-                  <i class="fa-solid fa-plus me-1"></i> Add Cattle
+                  <i class="fa-solid fa-plus me-1"></i> Register New Cattle
                 </a>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination Controls (10 Cattle Per Page) -->
+    {% if pagination and pagination.pages > 1 %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center p-3 border-top bg-light">
+      <div class="small text-muted mb-2 mb-sm-0">
+        Showing <strong>{{ (pagination.page - 1) * pagination.per_page + 1 }}</strong> to <strong>{{ [pagination.page * pagination.per_page, pagination.total]|min }}</strong> of <strong>{{ pagination.total }}</strong> cattle
+      </div>
+      <nav aria-label="Cattle Pagination">
+        <ul class="pagination pagination-sm mb-0">
+          <!-- Previous Page -->
+          <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{% if pagination.has_prev %}{{ url_for('animal.list_animals', page=pagination.prev_num, search=search, species=selected_species, status=selected_status, health=selected_health) }}{% else %}#{% endif %}">
+              <i class="fa-solid fa-chevron-left"></i> Prev
+            </a>
+          </li>
+
+          <!-- Page Numbers -->
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+              <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('animal.list_animals', page=p, search=search, species=selected_species, status=selected_status, health=selected_health) }}">{{ p }}</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+            {% endif %}
+          {% endfor %}
+
+          <!-- Next Page -->
+          <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{% if pagination.has_next %}{{ url_for('animal.list_animals', page=pagination.next_num, search=search, species=selected_species, status=selected_status, health=selected_health) }}{% else %}#{% endif %}">
+              Next <i class="fa-solid fa-chevron-right"></i>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

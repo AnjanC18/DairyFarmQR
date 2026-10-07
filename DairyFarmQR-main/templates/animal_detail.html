@@ -44,9 +44,11 @@
     <a href="{{ url_for('milk.milk_list', animal_id=animal.id) }}" class="btn btn-custom-primary">
       <i class="fa-solid fa-glass-water me-1"></i> Log Milk
     </a>
+    {% if current_user.is_manager() %}
     <a href="{{ url_for('animal.edit_animal', id=animal.id) }}" class="btn btn-outline-secondary">
       <i class="fa-solid fa-pen-to-square me-1"></i> Edit
     </a>
+    {% endif %}
     <button onclick="window.print()" class="btn btn-outline-dark no-print">
       <i class="fa-solid fa-print me-1"></i> Print Profile
     </button>

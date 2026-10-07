@@ -1,12 +1,18 @@
 {% extends "layout.html" %}
 
-{% block title %}Register Cattle - Smart Dairy Farm{% endblock %}
-{% block page_title %}Register New Cattle{% endblock %}
+{% block title %}Register Cattle & Generate QR - Smart Dairy Farm{% endblock %}
+{% block page_title %}Register New Cattle & QR Tag Generator{% endblock %}
+
+{% block extra_head %}
+<!-- QRCode.js library for instant live QR generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-lg-10">
-    <div class="content-card">
+<div class="row g-4">
+  <!-- Left Column: Cattle Registration Form -->
+  <div class="col-lg-8">
+    <div class="content-card mb-0">
       <div class="content-card-header">
         <h5 class="content-card-title"><i class="fa-solid fa-cow text-primary"></i> Cattle Registration Form</h5>
         <a href="{{ url_for('animal.list_animals') }}" class="btn btn-sm btn-outline-secondary">
@@ -14,28 +20,28 @@
         </a>
       </div>
       <div class="content-card-body">
-        <form method="POST" action="{{ url_for('animal.add_animal') }}">
+        <form method="POST" action="{{ url_for('animal.add_animal') }}" id="addCattleForm">
           <div class="row g-3 mb-4">
             <!-- Tag Number -->
-            <div class="col-md-4">
+            <div class="col-md-6">
               <label class="form-label fw-bold">Ear Tag Number *</label>
               <div class="input-group">
-                <span class="input-group-text bg-light"><i class="fa-solid fa-tag text-muted"></i></span>
-                <input type="text" name="tag_number" class="form-control text-uppercase" placeholder="e.g. DF-109" required autofocus>
+                <span class="input-group-text bg-light"><i class="fa-solid fa-tag text-primary"></i></span>
+                <input type="text" name="tag_number" id="tagNumberInput" class="form-control text-uppercase fw-bold" placeholder="e.g. DF-109" required autofocus>
               </div>
-              <div class="form-text">Unique identification tag. QR code will be generated automatically.</div>
+              <div class="form-text">Unique identification number. QR tag generates live on the right.</div>
             </div>
 
             <!-- Cattle Name / Nickname -->
-            <div class="col-md-4">
+            <div class="col-md-6">
               <label class="form-label fw-bold">Cattle Name / Identifier</label>
-              <input type="text" name="name" class="form-control" placeholder="e.g. Ganga, Lakshmi (Optional)">
+              <input type="text" name="name" id="cattleNameInput" class="form-control" placeholder="e.g. Ganga, Lakshmi (Optional)">
             </div>
 
             <!-- Species -->
             <div class="col-md-4">
               <label class="form-label fw-bold">Species *</label>
-              <select name="species" class="form-select" required>
+              <select name="species" id="speciesSelect" class="form-select" required>
                 <option value="Cow" selected>Cow (Cattle)</option>
                 <option value="Buffalo">Buffalo</option>
                 <option value="Goat">Goat</option>
@@ -46,7 +52,7 @@
             <!-- Breed -->
             <div class="col-md-4">
               <label class="form-label fw-bold">Breed *</label>
-              <input type="text" name="breed" class="form-control" placeholder="e.g. Gir, Sahiwal, Murrah, HF, Jersey" required>
+              <input type="text" name="breed" id="breedInput" class="form-control" placeholder="e.g. Gir, Sahiwal, Murrah, HF, Jersey" required>
             </div>
 
             <!-- Gender -->
@@ -73,7 +79,7 @@
             <!-- Milking Status -->
             <div class="col-md-4">
               <label class="form-label fw-bold">Milking / Life Status *</label>
-              <select name="milking_status" class="form-select" required>
+              <select name="milking_status" id="milkingStatusSelect" class="form-select" required>
                 <option value="Milking" selected>Milking (In Milk)</option>
                 <option value="Dry">Dry (Non-lactating)</option>
                 <option value="Pregnant">Pregnant</option>
@@ -84,7 +90,7 @@
             </div>
 
             <!-- Health Status -->
-            <div class="col-md-4">
+            <div class="col-md-6">
               <label class="form-label fw-bold">Health Status *</label>
               <select name="health_status" class="form-select" required>
                 <option value="Healthy" selected>Healthy</option>
@@ -95,13 +101,13 @@
             </div>
 
             <!-- Entry Date -->
-            <div class="col-md-4">
+            <div class="col-md-6">
               <label class="form-label fw-bold">Farm Entry Date</label>
               <input type="date" name="entry_date" class="form-control">
             </div>
 
             <!-- Notes -->
-            <div class="col-md-8">
+            <div class="col-12">
               <label class="form-label fw-bold">Pedigree / Health Notes</label>
               <textarea name="notes" class="form-control" rows="2" placeholder="Dam, Sire info, medical history or markings..."></textarea>
             </div>
@@ -110,12 +116,88 @@
           <div class="d-flex justify-content-end gap-2 border-top pt-3">
             <a href="{{ url_for('animal.list_animals') }}" class="btn btn-outline-secondary">Cancel</a>
             <button type="submit" class="btn btn-custom-primary">
-              <i class="fa-solid fa-floppy-disk me-1"></i> Save & Generate QR Tag
+              <i class="fa-solid fa-qrcode me-1"></i> Save & Generate QR Tag
             </button>
           </div>
         </form>
       </div>
     </div>
   </div>
+
+  <!-- Right Column: Live QR Generator Preview Card -->
+  <div class="col-lg-4">
+    <div class="content-card text-center sticky-top" style="top: 80px;">
+      <div class="content-card-header bg-light">
+        <h5 class="content-card-title fs-6">
+          <i class="fa-solid fa-qrcode text-primary me-1"></i> Live QR Tag Generator
+        </h5>
+        <span class="badge bg-success">Auto-Sync</span>
+      </div>
+      <div class="content-card-body p-4 d-flex flex-column align-items-center">
+        <div class="p-3 bg-white border border-2 border-primary rounded-3 shadow-sm mb-3 d-inline-block text-center" style="min-width: 200px; min-height: 200px;">
+          <!-- QR Canvas / Container -->
+          <div id="liveQrContainer" class="d-flex align-items-center justify-content-center" style="width: 170px; height: 170px; margin: 0 auto;"></div>
+          <div id="liveQrTagText" class="mt-2 py-1 px-2 bg-primary text-white fw-bold rounded small">
+            TAG: DF-109
+          </div>
+        </div>
+
+        <h5 id="previewAnimalTitle" class="fw-bold mb-1 text-dark">DF-109</h5>
+        <div id="previewAnimalSubtitle" class="text-muted small mb-3">Cow &bull; Milking</div>
+
+        <div class="alert alert-info py-2 px-3 small w-100 text-start mb-0">
+          <i class="fa-solid fa-circle-info me-1"></i>
+          This QR code is generated instantly and will be attached to the cattle record for scanning via mobile camera.
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const tagInput = document.getElementById('tagNumberInput');
+    const nameInput = document.getElementById('cattleNameInput');
+    const speciesSelect = document.getElementById('speciesSelect');
+    const statusSelect = document.getElementById('milkingStatusSelect');
+    const qrContainer = document.getElementById('liveQrContainer');
+    const tagTextDisplay = document.getElementById('liveQrTagText');
+    const previewTitle = document.getElementById('previewAnimalTitle');
+    const previewSubtitle = document.getElementById('previewAnimalSubtitle');
+
+    let qrcodeObj = null;
+
+    function updateLiveQr() {
+      const tagVal = (tagInput.value || 'DF-109').trim().toUpperCase();
+      const nameVal = nameInput.value.trim();
+      const speciesVal = speciesSelect.value;
+      const statusVal = statusSelect.value;
+
+      tagTextDisplay.textContent = `TAG: ${tagVal}`;
+      previewTitle.textContent = nameVal ? `${tagVal} (${nameVal})` : tagVal;
+      previewSubtitle.textContent = `${speciesVal} • ${statusVal}`;
+
+      // Clear container and regenerate
+      qrContainer.innerHTML = '';
+      qrcodeObj = new QRCode(qrContainer, {
+        text: tagVal,
+        width: 160,
+        height: 160,
+        colorDark: "#1e3a8a",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    tagInput.addEventListener('input', updateLiveQr);
+    nameInput.addEventListener('input', updateLiveQr);
+    speciesSelect.addEventListener('change', updateLiveQr);
+    statusSelect.addEventListener('change', updateLiveQr);
+
+    // Initial render
+    updateLiveQr();
+  });
+</script>
 {% endblock %}

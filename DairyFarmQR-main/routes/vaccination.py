@@ -49,6 +49,10 @@ def vaccination_list():
 @vaccination_bp.route('/vaccinations/add', methods=['POST'])
 @login_required
 def add_vaccination():
+    if not current_user.is_manager():
+        flash('Access denied. Staff members cannot add vaccination records.', 'danger')
+        return redirect(url_for('vaccination.vaccination_list'))
+
     animal_id = request.form.get('animal_id')
     vaccine_name = request.form.get('vaccine_name', '').strip()
     administered_date_str = request.form.get('administered_date', '')
@@ -105,6 +109,10 @@ def mark_done(id):
 @vaccination_bp.route('/vaccinations/delete/<int:id>', methods=['POST'])
 @login_required
 def delete_vaccination(id):
+    if not current_user.is_manager():
+        flash('Access denied. Staff members cannot delete vaccination records.', 'danger')
+        return redirect(url_for('vaccination.vaccination_list'))
+
     vax = Vaccination.query.get_or_404(id)
     db.session.delete(vax)
     db.session.commit()

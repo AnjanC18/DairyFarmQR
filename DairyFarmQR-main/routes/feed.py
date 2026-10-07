@@ -27,6 +27,10 @@ def feed_list():
 @feed_bp.route('/feed/add-stock', methods=['POST'])
 @login_required
 def add_stock():
+    if not current_user.is_manager():
+        flash('Access denied. Staff members cannot add or restock feed inventory.', 'danger')
+        return redirect(url_for('feed.feed_list'))
+
     feed_name = request.form.get('feed_name', '').strip()
     category = request.form.get('category', 'Concentrate')
     quantity = request.form.get('quantity', '0')
@@ -124,6 +128,10 @@ def log_consumption():
 @feed_bp.route('/feed/delete/<int:id>', methods=['POST'])
 @login_required
 def delete_feed(id):
+    if not current_user.is_manager():
+        flash('Access denied. Staff members cannot delete feed inventory.', 'danger')
+        return redirect(url_for('feed.feed_list'))
+
     feed = FeedInventory.query.get_or_404(id)
     db.session.delete(feed)
     db.session.commit()

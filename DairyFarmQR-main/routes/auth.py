@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
+from sqlalchemy import func
 from models import db
 from models.user import User
 
@@ -24,11 +25,18 @@ def login():
         return redirect(url_for('main.dashboard'))
 
     if request.method == 'POST':
-        username = request.form.get('username', '').strip()
+        identifier = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         remember = bool(request.form.get('remember'))
 
-        user = User.query.filter((User.username == username) | (User.email == username)).first()
+        if not identifier or not password:
+            flash('Please enter your username/email and password.', 'danger')
+            return render_template('login.html')
+
+        user = User.query.filter(
+            (func.lower(User.username) == identifier.lower()) | 
+            (func.lower(User.email) == identifier.lower())
+        ).first()
 
         if user and user.check_password(password):
             if not user.is_active:
@@ -127,22 +135,23 @@ def register():
             flash('Passwords do not match.', 'danger')
             return redirect(url_for('auth.user_list'))
 
-        # Check username uniqueness
-        if User.query.filter_by(username=username).first():
+        # Check username uniqueness (case-insensitive)
+        if User.query.filter(func.lower(User.username) == username.lower()).first():
             flash(f'Username "{username}" is already taken.', 'danger')
             return redirect(url_for('auth.user_list'))
 
-        # Check email uniqueness
-        if User.query.filter_by(email=email).first():
+        # Check email uniqueness (case-insensitive)
+        if User.query.filter(func.lower(User.email) == email.lower()).first():
             flash(f'Email "{email}" is already registered.', 'danger')
             return redirect(url_for('auth.user_list'))
 
-        # Create user
+        # Create user with explicit is_active=True
         new_user = User(
             full_name=full_name,
             username=username,
             email=email,
-            role=role if role in ('admin', 'manager', 'staff') else 'staff'
+            role=role if role in ('admin', 'manager', 'staff') else 'staff',
+            is_active=True
         )
         new_user.set_password(password)
 

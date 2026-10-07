@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Smart Dairy">
+  
   <title>{% block title %}Smart Dairy Farm Management{% endblock %}</title>
   
   <!-- Bootstrap 5 CSS -->
@@ -13,21 +18,41 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   {% block extra_head %}{% endblock %}
 </head>
 <body>
+  <!-- Sidebar Backdrop for Mobile Screens -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
   <div class="app-wrapper">
     <!-- Sidebar Navigation -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="appSidebar">
       <div class="sidebar-brand">
         <div class="sidebar-brand-icon">
           <i class="fa-solid fa-cow"></i>
         </div>
-        <div>
+        <div class="flex-grow-1">
           <div class="sidebar-brand-text">Smart Dairy</div>
           <div class="sidebar-brand-sub">Farm Management</div>
         </div>
+        <!-- Close button for mobile -->
+        <button type="button" class="btn btn-sm btn-link text-white-50 d-lg-none p-1" id="sidebarCloseBtn" aria-label="Close sidebar">
+          <i class="fa-solid fa-xmark fs-4"></i>
+        </button>
+      </div>
+
+      <!-- Mobile quick access card inside sidebar -->
+      <div class="p-3 mx-2 my-2 rounded-3 bg-dark border border-secondary border-opacity-25 d-lg-none">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <span class="badge bg-primary"><i class="fa-solid fa-wifi me-1"></i> LAN Online</span>
+          <small class="text-white-50">{{ local_ip }}</small>
+        </div>
+        <button type="button" class="btn btn-xs btn-outline-light w-100 py-1 mt-1 small" data-bs-toggle="modal" data-bs-target="#mobileAccessModal">
+          <i class="fa-solid fa-qrcode me-1"></i> Show Mobile Link QR
+        </button>
       </div>
 
       <ul class="sidebar-nav">
@@ -109,25 +134,47 @@
     <div class="main-content">
       <!-- Top Navbar -->
       <header class="top-navbar">
-        <div class="d-flex align-items-center gap-3">
-          <button class="btn btn-outline-secondary d-lg-none" id="sidebarToggle" type="button">
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-outline-secondary d-lg-none" id="sidebarToggle" type="button" aria-label="Toggle navigation">
             <i class="fa-solid fa-bars"></i>
           </button>
-          <h5 class="m-0 fw-bold text-dark d-none d-md-block">{% block page_title %}Smart Dairy Dashboard{% endblock %}</h5>
+          <h5 class="m-0 fw-bold text-dark d-none d-lg-block">{% block page_title %}Smart Dairy Dashboard{% endblock %}</h5>
+          <span class="d-lg-none fw-bold text-primary fs-6"><i class="fa-solid fa-cow me-1"></i> Smart Dairy</span>
         </div>
 
-        <div class="d-flex align-items-center gap-3">
-          <a href="{{ url_for('qr.scan_qr') }}" class="btn btn-sm btn-outline-primary d-none d-sm-inline-flex align-items-center gap-2">
-            <i class="fa-solid fa-camera"></i> Scan Cattle QR
+        <!-- Global Cattle Tag Live Search (Desktop & Tablet) -->
+        <div class="position-relative d-none d-md-block flex-grow-1 mx-lg-4" style="max-width: 360px;">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+            <input type="text" id="globalNavSearch" class="form-control border-start-0 bg-white" placeholder="Type Tag No. (e.g. 101, DF-101)..." autocomplete="off">
+          </div>
+          <div id="globalSearchResults" class="dropdown-menu shadow-lg w-100 p-0 position-absolute mt-1" style="display: none; max-height: 320px; overflow-y: auto; z-index: 1060;"></div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <!-- Mobile Search Toggle Button -->
+          <button type="button" class="btn btn-sm btn-light border d-md-none text-secondary" id="mobileSearchToggleBtn" aria-label="Search cattle">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </button>
+
+          <!-- Mobile Access Connect Button -->
+          <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#mobileAccessModal" title="Connect Phone / Open on Mobile">
+            <i class="fa-solid fa-mobile-screen"></i>
+            <span class="d-none d-sm-inline">Mobile Access</span>
+          </button>
+
+          <!-- Scan QR Link -->
+          <a href="{{ url_for('qr.scan_qr') }}" class="btn btn-sm btn-custom-primary d-none d-sm-inline-flex align-items-center gap-1">
+            <i class="fa-solid fa-camera"></i> <span class="d-none d-md-inline">Scan QR</span>
           </a>
           
           <!-- User Profile Dropdown -->
           <div class="dropdown">
-            <button class="btn btn-light d-flex align-items-center gap-2 dropdown-toggle py-1 px-3 border" type="button" data-bs-toggle="dropdown">
-              <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-weight: 600;">
+            <button class="btn btn-light d-flex align-items-center gap-2 dropdown-toggle py-1 px-2 border" type="button" data-bs-toggle="dropdown">
+              <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 30px; height: 30px; font-weight: 600; font-size: 0.85rem;">
                 {{ current_user.full_name[0] if current_user.is_authenticated else 'A' }}
               </div>
-              <span class="fw-semibold text-dark fs-6">{{ current_user.full_name if current_user.is_authenticated else 'Admin' }}</span>
+              <span class="fw-semibold text-dark fs-6 d-none d-sm-inline">{{ current_user.full_name if current_user.is_authenticated else 'Admin' }}</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow-sm">
               <li>
@@ -141,6 +188,7 @@
               {% if current_user.is_authenticated and current_user.is_admin() %}
               <li><a class="dropdown-item py-2" href="{{ url_for('auth.user_list') }}"><i class="fa-solid fa-user-shield me-2 text-muted"></i> Manage User Logins</a></li>
               {% endif %}
+              <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#mobileAccessModal"><i class="fa-solid fa-qrcode me-2 text-muted"></i> Connect Phone (QR)</a></li>
               <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item text-danger py-2" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket me-2"></i> Log Out</a></li>
             </ul>
@@ -148,13 +196,23 @@
         </div>
       </header>
 
+      <!-- Expandable Mobile Search Container -->
+      <div id="mobileSearchContainer" class="p-2 bg-white border-bottom shadow-sm d-none d-md-none position-relative">
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+          <input type="text" id="mobileNavSearch" class="form-control" placeholder="Search Cattle Tag Number..." autocomplete="off">
+          <button class="btn btn-outline-secondary" type="button" id="mobileSearchCloseBtn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="mobileSearchResults" class="dropdown-menu shadow-lg w-100 p-0 position-absolute mt-1" style="display: none; max-height: 280px; overflow-y: auto; z-index: 1060; left: 0; right: 0;"></div>
+      </div>
+
       <!-- Content Body -->
       <main class="content-body">
         <!-- Flash Alerts -->
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-3" role="alert">
                 <i class="fa-solid {% if category == 'success' %}fa-circle-check{% elif category == 'danger' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %} me-2"></i>
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -167,9 +225,91 @@
       </main>
 
       <!-- Footer -->
-      <footer class="text-center py-3 text-muted small border-top bg-white no-print">
-        &copy; 2026 Smart Dairy Farm Management System &bull; MCA Minor Project
+      <footer class="text-center py-3 text-muted small border-top bg-white no-print mb-5 mb-lg-0">
+        &copy; 2026 Smart Dairy Farm Management System. All rights reserved.
       </footer>
+    </div>
+  </div>
+
+  <!-- Native-App Style Bottom Navigation Bar for Mobile -->
+  <nav class="mobile-bottom-nav d-lg-none no-print">
+    <a href="{{ url_for('main.dashboard') }}" class="mobile-nav-item {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+      <i class="fa-solid fa-chart-pie"></i>
+      <span>Home</span>
+    </a>
+    <a href="{{ url_for('animal.list_animals') }}" class="mobile-nav-item {% if request.endpoint and request.endpoint.startswith('animal.') %}active{% endif %}">
+      <i class="fa-solid fa-cow"></i>
+      <span>Cattle</span>
+    </a>
+    <a href="{{ url_for('milk.milk_list') }}" class="mobile-nav-item {% if request.endpoint and request.endpoint.startswith('milk.') %}active{% endif %}">
+      <i class="fa-solid fa-glass-water"></i>
+      <span>Milk</span>
+    </a>
+    <a href="{{ url_for('qr.scan_qr') }}" class="mobile-nav-item mobile-nav-center {% if request.endpoint == 'qr.scan_qr' %}active{% endif %}">
+      <div class="center-icon-btn">
+        <i class="fa-solid fa-qrcode"></i>
+      </div>
+      <span>Scan</span>
+    </a>
+    <a href="{{ url_for('feed.feed_list') }}" class="mobile-nav-item {% if request.endpoint and request.endpoint.startswith('feed.') %}active{% endif %}">
+      <i class="fa-solid fa-wheat-awn"></i>
+      <span>Feed</span>
+    </a>
+    <button type="button" class="mobile-nav-item border-0 bg-transparent" id="mobileBottomMenuBtn">
+      <i class="fa-solid fa-bars"></i>
+      <span>Menu</span>
+    </button>
+  </nav>
+
+  <!-- Mobile Access Connection Modal -->
+  <div class="modal fade" id="mobileAccessModal" tabindex="-1" aria-labelledby="mobileAccessModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title fw-bold" id="mobileAccessModalLabel">
+            <i class="fa-solid fa-mobile-screen-button me-2"></i> Access App from Mobile Device
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center p-4">
+          <p class="text-muted small mb-3">
+            Open the camera or QR code scanner on your smartphone to connect instantly:
+          </p>
+
+          <!-- Generated Mobile QR -->
+          <div class="p-3 bg-white border border-2 border-primary rounded-3 shadow-sm d-inline-block mb-3">
+            <div id="mobileAppQrContainer" style="width: 180px; height: 180px; margin: 0 auto;" class="d-flex align-items-center justify-content-center"></div>
+          </div>
+
+          <!-- Direct Mobile URL & Copy -->
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-muted">Network URL for Mobile Browsers:</label>
+            <div class="input-group">
+              <input type="text" id="mobileUrlInput" class="form-control text-center fw-bold text-primary bg-light" value="{{ mobile_url }}" readonly>
+              <button class="btn btn-primary" type="button" id="copyMobileUrlBtn">
+                <i class="fa-solid fa-copy me-1"></i> Copy
+              </button>
+            </div>
+            <div id="copySuccessMsg" class="text-success small fw-semibold mt-1 d-none">
+              <i class="fa-solid fa-check me-1"></i> URL copied to clipboard!
+            </div>
+          </div>
+
+          <!-- Instructions Card -->
+          <div class="card bg-light border-0 text-start p-3 small">
+            <h6 class="fw-bold mb-2 text-dark"><i class="fa-solid fa-circle-info text-primary me-1"></i> Connection Guide:</h6>
+            <ol class="mb-0 ps-3 text-secondary">
+              <li class="mb-1">Make sure your phone is on the <strong>same Wi-Fi network</strong> (or phone hotspot) as this computer.</li>
+              <li class="mb-1">Scan the QR code above or type <strong>{{ mobile_url }}</strong> in Chrome/Safari.</li>
+              <li>Login with <strong>admin / admin123</strong> or your staff credentials.</li>
+            </ol>
+          </div>
+        </div>
+        <div class="modal-footer justify-content-between">
+          <div class="small text-muted"><i class="fa-solid fa-wifi text-success me-1"></i> Local IP: {{ local_ip }}</div>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -177,6 +317,55 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <!-- Application JS -->
   <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  
+  <script>
+    // Initialize Mobile Access QR Code in Modal
+    document.addEventListener('DOMContentLoaded', function() {
+      const mobileModal = document.getElementById('mobileAccessModal');
+      const mobileQrContainer = document.getElementById('mobileAppQrContainer');
+      const mobileUrl = "{{ mobile_url }}";
+      let qrRendered = false;
+
+      function renderMobileQr() {
+        if (!qrRendered && mobileQrContainer && typeof QRCode !== 'undefined') {
+          mobileQrContainer.innerHTML = '';
+          new QRCode(mobileQrContainer, {
+            text: mobileUrl,
+            width: 175,
+            height: 175,
+            colorDark: "#1e3a8a",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+          });
+          qrRendered = true;
+        }
+      }
+
+      if (mobileModal) {
+        mobileModal.addEventListener('shown.bs.modal', renderMobileQr);
+      }
+
+      // Copy Mobile URL Button
+      const copyBtn = document.getElementById('copyMobileUrlBtn');
+      const urlInput = document.getElementById('mobileUrlInput');
+      const copyMsg = document.getElementById('copySuccessMsg');
+
+      if (copyBtn && urlInput) {
+        copyBtn.addEventListener('click', function() {
+          navigator.clipboard.writeText(urlInput.value).then(() => {
+            if (copyMsg) {
+              copyMsg.classList.remove('d-none');
+              setTimeout(() => copyMsg.classList.add('d-none'), 3000);
+            }
+          }).catch(err => {
+            urlInput.select();
+            document.execCommand('copy');
+          });
+        });
+      }
+    });
+  </script>
+  
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

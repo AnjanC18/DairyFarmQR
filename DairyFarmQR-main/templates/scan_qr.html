@@ -1,74 +1,150 @@
 {% extends "layout.html" %}
 
 {% block title %}Scan Cattle QR Tag - Smart Dairy Farm{% endblock %}
-{% block page_title %}Real-time Cattle QR Tag Scanner{% endblock %}
+{% block page_title %}Cattle QR Tag Scanner{% endblock %}
 
 {% block extra_head %}
-<!-- HTML5 QR Code Scanner Library -->
+<!-- HTML5 QR Code & jsQR Scanning Libraries -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<style>
+  .scan-btn-hero {
+    border-radius: 16px;
+    padding: 16px 20px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .scan-btn-hero:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  }
+  .scan-icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+  }
+  #previewContainer {
+    max-height: 260px;
+    overflow: hidden;
+    border-radius: 12px;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-6 col-md-8">
+  <div class="col-lg-7 col-md-9 col-12">
     <!-- QR Scanner Card -->
     <div class="content-card mb-4">
-      <div class="content-card-header">
-        <h5 class="content-card-title"><i class="fa-solid fa-camera text-primary"></i> Camera QR Code Scanner</h5>
+      <div class="content-card-header d-flex justify-content-between align-items-center">
+        <h5 class="content-card-title mb-0"><i class="fa-solid fa-camera text-primary me-2"></i> Camera QR Code Scanner</h5>
+        <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fa-solid fa-mobile-screen me-1"></i> Mobile Ready</span>
       </div>
-      <div class="content-card-body text-center p-4">
-        <p class="text-muted small mb-3">
-          Point your mobile or laptop camera at any cattle's ear tag QR code to instantly pull up records.
-        </p>
+      <div class="content-card-body p-3 p-sm-4">
+        
+        <!-- Mobile Primary Scan Options -->
+        <div class="d-grid gap-3 mb-4">
+          <!-- 1. Primary Direct Phone Camera Button -->
+          <label class="scan-btn-hero btn btn-custom-primary text-white mb-0 shadow-sm cursor-pointer" for="mobileCameraInput">
+            <div class="scan-icon-circle bg-white text-primary">
+              <i class="fa-solid fa-camera"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="fs-6 fw-bold">Snap Tag with Camera</div>
+              <div class="text-white-50 small fw-normal">Opens your phone camera directly to capture QR</div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-white-50"></i>
+            <!-- Native mobile camera capture (Works 100% over HTTP & LAN!) -->
+            <input type="file" id="mobileCameraInput" accept="image/*" capture="environment" class="d-none">
+          </label>
 
-        <!-- QR Scanner Render Area -->
-        <div id="reader" style="width: 100%; max-width: 400px; margin: 0 auto; min-height: 250px;"></div>
-
-        <div class="mt-3 d-flex justify-content-center gap-2">
-          <button id="startScanBtn" class="btn btn-sm btn-custom-primary">
-            <i class="fa-solid fa-play me-1"></i> Start Camera
-          </button>
-          <button id="stopScanBtn" class="btn btn-sm btn-outline-secondary" disabled>
-            <i class="fa-solid fa-stop me-1"></i> Stop Camera
-          </button>
+          <div class="row g-2">
+            <div class="col-6">
+              <!-- 2. Gallery / Image File Upload -->
+              <label class="btn btn-outline-secondary w-100 py-2 d-flex align-items-center justify-content-center gap-2 mb-0" for="qrFileInput">
+                <i class="fa-solid fa-image text-primary"></i>
+                <span class="small fw-semibold">Photo Gallery</span>
+                <input type="file" id="qrFileInput" accept="image/*" class="d-none">
+              </label>
+            </div>
+            <div class="col-6">
+              <!-- 3. Live Video Stream Scanner (For supported browsers) -->
+              <button id="startScanBtn" type="button" class="btn btn-outline-primary w-100 py-2 d-flex align-items-center justify-content-center gap-2">
+                <i class="fa-solid fa-video"></i>
+                <span class="small fw-semibold" id="liveBtnText">Live Camera</span>
+              </button>
+            </div>
+          </div>
         </div>
 
-        <!-- Manual Tag Search Fallback -->
-        <div class="mt-4 pt-3 border-top">
-          <label class="form-label fw-bold small text-muted">Or enter Ear Tag Number manually:</label>
+        <!-- Scanning Status / Loading Indicator -->
+        <div id="scanProcessingIndicator" class="alert alert-info d-none text-center py-3 mb-3">
+          <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+          <span class="fw-semibold">Analyzing image and decoding QR code...</span>
+        </div>
+
+        <!-- Live Scanner Container (Hidden by default until Live Camera is clicked) -->
+        <div id="liveScannerWrapper" class="d-none mb-3">
+          <div id="reader" class="shadow-sm border rounded-3 bg-dark mx-auto overflow-hidden" style="width: 100%; max-width: 380px; min-height: 250px;"></div>
+          <div class="text-center mt-2">
+            <button id="stopScanBtn" type="button" class="btn btn-sm btn-danger px-3">
+              <i class="fa-solid fa-stop me-1"></i> Stop Live Camera
+            </button>
+          </div>
+        </div>
+
+        <!-- Image Preview Box -->
+        <div id="previewContainer" class="d-none text-center mb-3 bg-light border p-2 rounded-3">
+          <img id="previewImg" class="img-fluid rounded" style="max-height: 220px;" alt="Captured QR Tag">
+        </div>
+
+        <!-- Manual Ear Tag Number Input -->
+        <div class="pt-3 border-top text-start">
+          <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-keyboard me-1"></i> Or enter Tag Number directly:</label>
           <div class="input-group">
-            <input type="text" id="manualTagInput" class="form-control text-uppercase" placeholder="e.g. DF-101">
-            <button id="manualLookupBtn" class="btn btn-primary" type="button">
+            <span class="input-group-text bg-light"><i class="fa-solid fa-tag text-muted"></i></span>
+            <input type="text" id="manualTagInput" class="form-control text-uppercase fw-bold" placeholder="e.g. DF-101, DF-102" autocomplete="off" autocapitalize="characters">
+            <button id="manualLookupBtn" class="btn btn-primary px-3" type="button">
               <i class="fa-solid fa-magnifying-glass me-1"></i> Lookup
             </button>
           </div>
         </div>
+
       </div>
     </div>
 
     <!-- Scanned Animal Result Card (Hidden Initially) -->
-    <div id="resultCard" class="content-card border-primary d-none shadow-md">
-      <div class="content-card-header bg-primary text-white">
+    <div id="resultCard" class="content-card border-primary d-none shadow-lg mb-4">
+      <div class="content-card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <h5 class="content-card-title text-white mb-0">
           <i class="fa-solid fa-circle-check me-2"></i> Cattle Identified!
         </h5>
         <span id="resultMilkingStatus" class="badge bg-white text-primary fw-bold"></span>
       </div>
-      <div class="content-card-body p-4">
+      <div class="content-card-body p-3 p-sm-4">
         <div class="d-flex align-items-center gap-3 mb-3">
-          <div class="rounded-3 bg-light p-3 border text-center" style="width: 70px;">
+          <div class="rounded-3 bg-light p-3 border text-center flex-shrink-0" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
             <i class="fa-solid fa-cow fs-2 text-primary"></i>
           </div>
           <div>
             <h4 id="resultTag" class="fw-bold mb-0 text-dark"></h4>
-            <div id="resultNameBreed" class="text-muted fw-semibold"></div>
+            <div id="resultNameBreed" class="text-muted fw-semibold small"></div>
           </div>
         </div>
 
         <div class="row g-2 p-3 bg-light rounded-3 mb-3 small">
           <div class="col-6"><strong>Species:</strong> <span id="resultSpecies"></span></div>
           <div class="col-6"><strong>Age:</strong> <span id="resultAge"></span></div>
-          <div class="col-6"><strong>Health Status:</strong> <span id="resultHealth"></span></div>
+          <div class="col-6"><strong>Health:</strong> <span id="resultHealth"></span></div>
           <div class="col-6"><strong>Today's Milk:</strong> <span id="resultTodayMilk" class="text-success fw-bold"></span></div>
           <div class="col-12 mt-2 pt-2 border-top">
             <strong>Last Milk Entry:</strong> <span id="resultLastMilk" class="text-muted"></span>
@@ -87,6 +163,9 @@
     </div>
   </div>
 </div>
+
+<!-- Hidden Canvas for high-speed JS QR decoding -->
+<canvas id="qrCanvas" class="d-none"></canvas>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -94,20 +173,48 @@
   let html5QrCode = null;
   const startBtn = document.getElementById('startScanBtn');
   const stopBtn = document.getElementById('stopScanBtn');
+  const liveWrapper = document.getElementById('liveScannerWrapper');
   const resultCard = document.getElementById('resultCard');
   const manualBtn = document.getElementById('manualLookupBtn');
   const manualInput = document.getElementById('manualTagInput');
+  const mobileCameraInput = document.getElementById('mobileCameraInput');
+  const qrFileInput = document.getElementById('qrFileInput');
+  const processingIndicator = document.getElementById('scanProcessingIndicator');
+  const previewContainer = document.getElementById('previewContainer');
+  const previewImg = document.getElementById('previewImg');
+  const qrCanvas = document.getElementById('qrCanvas');
+
+  function showProcessing(show) {
+    if (processingIndicator) {
+      if (show) processingIndicator.classList.remove('d-none');
+      else processingIndicator.classList.add('d-none');
+    }
+  }
+
+  function cleanTagText(rawText) {
+    if (!rawText) return '';
+    rawText = rawText.trim();
+    // If it's a URL (e.g. http://.../animals/1 or DF-101)
+    if (rawText.includes('/animals/')) {
+      const parts = rawText.split('/animals/');
+      return parts[parts.length - 1].replace(/[^a-zA-Z0-9_-]/g, '');
+    }
+    return rawText;
+  }
 
   function lookupAnimal(tag) {
+    tag = cleanTagText(tag);
     if (!tag) return;
     
+    showProcessing(true);
     fetch(`/api/qr/lookup/${encodeURIComponent(tag)}`)
       .then(res => res.json())
       .then(data => {
+        showProcessing(false);
         if (data.success) {
           const a = data.animal;
           document.getElementById('resultTag').textContent = a.tag_number;
-          document.getElementById('resultNameBreed').textContent = `${a.name} • ${a.breed} (${a.gender})`;
+          document.getElementById('resultNameBreed').textContent = `${a.name || 'Unnamed'} • ${a.breed} (${a.gender})`;
           document.getElementById('resultSpecies').textContent = a.species;
           document.getElementById('resultAge').textContent = a.age;
           document.getElementById('resultHealth').textContent = a.health_status;
@@ -126,15 +233,103 @@
           resultCard.classList.remove('d-none');
           resultCard.scrollIntoView({ behavior: 'smooth' });
         } else {
-          alert(data.message || 'Animal not found.');
+          alert(data.message || 'Cattle record not found for tag: ' + tag);
         }
       })
       .catch(err => {
+        showProcessing(false);
         console.error(err);
-        alert('Error communicating with dairy server.');
+        alert('Could not connect to dairy server.');
       });
   }
 
+  // Fast JS decoding from file using Canvas & jsQR
+  function decodeImageFile(file) {
+    if (!file) return;
+    showProcessing(true);
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        if (previewImg && previewContainer) {
+          previewImg.src = e.target.result;
+          previewContainer.classList.remove('d-none');
+        }
+
+        // Scale to optimal dimensions for QR detection
+        const maxDim = 1000;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+
+        const ctx = qrCanvas.getContext('2d');
+        qrCanvas.width = w;
+        qrCanvas.height = h;
+        ctx.drawImage(img, 0, 0, w, h);
+
+        const imageData = ctx.getImageData(0, 0, w, h);
+        let decoded = null;
+
+        // Try jsQR first (ultra-fast)
+        if (typeof jsQR !== 'undefined') {
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "dontInvert",
+          }) || jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "attemptBoth",
+          });
+          if (code && code.data) {
+            decoded = code.data;
+          }
+        }
+
+        if (decoded) {
+          showProcessing(false);
+          lookupAnimal(decoded);
+        } else {
+          // Fallback to html5-qrcode file scanner
+          try {
+            const scanner = new Html5Qrcode("reader");
+            scanner.scanFile(file, true)
+              .then(decodedText => {
+                showProcessing(false);
+                lookupAnimal(decodedText);
+              })
+              .catch(() => {
+                showProcessing(false);
+                alert("Could not detect QR code in this photo. Please ensure the QR tag is in focus and try again, or enter the tag number below.");
+              });
+          } catch(err) {
+            showProcessing(false);
+            alert("Could not detect QR code in photo. Please enter tag number below.");
+          }
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Handle Photo Snapped or Selected
+  [mobileCameraInput, qrFileInput].forEach(input => {
+    if (input) {
+      input.addEventListener('change', e => {
+        if (e.target.files && e.target.files[0]) {
+          decodeImageFile(e.target.files[0]);
+        }
+      });
+    }
+  });
+
+  // Manual lookup
   manualBtn.addEventListener('click', () => {
     lookupAnimal(manualInput.value.trim());
   });
@@ -145,39 +340,47 @@
     }
   });
 
+  // Live Camera Scanning
   startBtn.addEventListener('click', () => {
+    // Check if mediaDevices is supported in current context
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      // If running over HTTP on mobile LAN, open the direct camera capture
+      mobileCameraInput.click();
+      return;
+    }
+
+    liveWrapper.classList.remove('d-none');
     html5QrCode = new Html5Qrcode("reader");
-    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    const config = { fps: 10, qrbox: { width: 220, height: 220 } };
 
     html5QrCode.start(
       { facingMode: "environment" },
       config,
-      (decodedText, decodedResult) => {
-        console.log(`Scan result: ${decodedText}`);
-        lookupAnimal(decodedText.trim());
-        // Pause or stop scanner after success
+      (decodedText) => {
+        lookupAnimal(decodedText);
         html5QrCode.stop().then(() => {
-          startBtn.disabled = false;
-          stopBtn.disabled = true;
+          liveWrapper.classList.add('d-none');
         });
       },
-      (errorMessage) => {
-        // scan error / waiting
-      }
+      () => {}
     ).then(() => {
       startBtn.disabled = true;
-      stopBtn.disabled = false;
     }).catch(err => {
-      alert("Camera access error: " + err);
+      liveWrapper.classList.add('d-none');
+      startBtn.disabled = false;
+      // Gracefully trigger mobile snapshot instead of breaking
+      mobileCameraInput.click();
     });
   });
 
   stopBtn.addEventListener('click', () => {
     if (html5QrCode) {
       html5QrCode.stop().then(() => {
+        liveWrapper.classList.add('d-none');
         startBtn.disabled = false;
-        stopBtn.disabled = true;
       });
+    } else {
+      liveWrapper.classList.add('d-none');
     }
   });
 </script>

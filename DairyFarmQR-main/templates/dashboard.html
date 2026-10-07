@@ -17,9 +17,11 @@
     <a href="{{ url_for('milk.quick_entry') }}" class="btn btn-outline-primary">
       <i class="fa-solid fa-bolt me-1"></i> Quick Batch Entry
     </a>
+    {% if current_user.is_manager() %}
     <a href="{{ url_for('animal.add_animal') }}" class="btn btn-outline-secondary">
       <i class="fa-solid fa-cow me-1"></i> Add Cattle
     </a>
+    {% endif %}
   </div>
 </div>
 

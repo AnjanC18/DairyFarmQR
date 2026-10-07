@@ -1,6 +1,6 @@
 /* ==========================================================
    SMART DAIRY FARM MANAGEMENT SYSTEM - CUSTOM CSS
-   Modern, Sleek, Professional Theme
+   Modern, Sleek, Mobile-First & Responsive Theme
    ========================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
@@ -8,6 +8,7 @@
 :root {
   --primary-color: #2563eb;
   --primary-hover: #1d4ed8;
+  --primary-light: #eff6ff;
   --secondary-color: #0d9488;
   --success-color: #10b981;
   --warning-color: #f59e0b;
@@ -26,6 +27,11 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.07);
   --shadow-lg: 0 10px 25px rgba(0,0,0,0.08);
+  --bottom-nav-height: 62px;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
@@ -36,6 +42,7 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ==========================================================
@@ -46,6 +53,7 @@ body {
   display: flex;
   min-height: 100vh;
   width: 100%;
+  position: relative;
 }
 
 .sidebar {
@@ -59,13 +67,13 @@ body {
   top: 0;
   bottom: 0;
   left: 0;
-  z-index: 1040;
+  z-index: 1050;
   box-shadow: 4px 0 20px rgba(0,0,0,0.15);
-  transition: all 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-brand {
-  padding: 24px 20px;
+  padding: 20px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -73,28 +81,28 @@ body {
 }
 
 .sidebar-brand-icon {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-md);
   background: linear-gradient(135deg, #3b82f6, #10b981);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .sidebar-brand-text {
   font-weight: 800;
-  font-size: 1.1rem;
+  font-size: 1.08rem;
   letter-spacing: -0.5px;
   color: #ffffff;
   line-height: 1.2;
 }
 
 .sidebar-brand-sub {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: #94a3b8;
   font-weight: 500;
   text-transform: uppercase;
@@ -102,7 +110,7 @@ body {
 }
 
 .sidebar-nav {
-  padding: 16px 12px;
+  padding: 14px 10px;
   list-style: none;
   margin: 0;
   flex-grow: 1;
@@ -110,7 +118,7 @@ body {
 }
 
 .nav-header {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
   font-weight: 700;
   color: #64748b;
@@ -119,17 +127,17 @@ body {
 }
 
 .sidebar-nav .nav-item {
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .sidebar-nav .nav-link {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 11px 16px;
+  gap: 12px;
+  padding: 10px 14px;
   color: #94a3b8;
   font-weight: 500;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   border-radius: var(--radius-md);
   text-decoration: none;
   transition: all 0.2s ease;
@@ -149,9 +157,29 @@ body {
 }
 
 .sidebar-nav .nav-link i {
-  font-size: 1.15rem;
-  width: 22px;
+  font-size: 1.1rem;
+  width: 20px;
   text-align: center;
+}
+
+/* Sidebar Backdrop on Mobile */
+.sidebar-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1045;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.sidebar-backdrop.show {
+  opacity: 1;
+  visibility: visible;
 }
 
 .main-content {
@@ -165,10 +193,10 @@ body {
 }
 
 .top-navbar {
-  height: 70px;
+  height: 65px;
   background-color: #ffffff;
   border-bottom: 1px solid var(--border-color);
-  padding: 0 28px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -179,7 +207,7 @@ body {
 }
 
 .content-body {
-  padding: 28px;
+  padding: 24px;
   flex-grow: 1;
 }
 
@@ -190,7 +218,7 @@ body {
 .stat-card {
   background: #ffffff;
   border-radius: var(--radius-lg);
-  padding: 22px;
+  padding: 20px;
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
   display: flex;
@@ -202,7 +230,7 @@ body {
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-3px);
   box-shadow: var(--shadow-md);
 }
 
@@ -217,13 +245,14 @@ body {
 }
 
 .stat-icon {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.45rem;
+  font-size: 1.35rem;
+  flex-shrink: 0;
 }
 
 .stat-icon.primary { background-color: #eff6ff; color: #2563eb; }
@@ -234,7 +263,7 @@ body {
 .stat-icon.teal    { background-color: #f0fdfa; color: #0d9488; }
 
 .stat-value {
-  font-size: 1.75rem;
+  font-size: 1.65rem;
   font-weight: 800;
   letter-spacing: -0.5px;
   line-height: 1.1;
@@ -243,7 +272,7 @@ body {
 }
 
 .stat-label {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
@@ -264,41 +293,44 @@ body {
 }
 
 .content-card-header {
-  padding: 18px 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
   background-color: #fafbfc;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .content-card-title {
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 700;
   color: var(--text-main);
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .content-card-body {
-  padding: 24px;
+  padding: 20px;
 }
 
 /* ==========================================================
-   Badges & Tags
+   Badges & Status Tags
    ========================================================== */
 
 .badge-status {
-  padding: 6px 12px;
+  padding: 5px 10px;
   border-radius: 30px;
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   font-weight: 600;
   letter-spacing: 0.3px;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
+  white-space: nowrap;
 }
 
 .badge-milking    { background-color: #dbeafe; color: #1d4ed8; }
@@ -316,31 +348,37 @@ body {
 .badge-completed  { background-color: #dcfce7; color: #15803d; }
 
 /* ==========================================================
-   Custom Tables
+   Custom Tables & Responsive Scroll
    ========================================================== */
+
+.table-responsive {
+  -webkit-overflow-scrolling: touch;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
 
 .custom-table {
   width: 100%;
   margin-bottom: 0;
+  white-space: nowrap;
 }
 
 .custom-table thead th {
   background-color: #f8fafc;
   color: #475569;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  padding: 14px 18px;
+  padding: 12px 16px;
   border-bottom: 2px solid var(--border-color);
   border-top: none;
 }
 
 .custom-table tbody td {
-  padding: 14px 18px;
+  padding: 12px 16px;
   vertical-align: middle;
   border-bottom: 1px solid var(--border-color);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: var(--text-main);
 }
 
@@ -349,8 +387,24 @@ body {
 }
 
 /* ==========================================================
-   Buttons & Inputs
+   Buttons, Form Controls & Touch Targets
    ========================================================== */
+
+.btn {
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.84rem;
+}
 
 .btn-custom-primary {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
@@ -358,9 +412,8 @@ body {
   border: none;
   font-weight: 600;
   border-radius: var(--radius-md);
-  padding: 9px 20px;
+  padding: 8px 18px;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
-  transition: all 0.2s ease;
 }
 
 .btn-custom-primary:hover {
@@ -373,8 +426,8 @@ body {
 .form-control, .form-select {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
-  padding: 10px 14px;
-  font-size: 0.92rem;
+  padding: 9px 13px;
+  font-size: 0.9rem;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -384,18 +437,93 @@ body {
 }
 
 /* ==========================================================
+   Native Mobile App Bottom Navigation Bar
+   ========================================================== */
+
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--bottom-nav-height);
+  background-color: #ffffff;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 1040;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+  padding: 0 6px;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.mobile-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0;
+  color: #64748b;
+  text-decoration: none;
+  font-size: 0.7rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.mobile-nav-item i {
+  font-size: 1.15rem;
+  margin-bottom: 2px;
+}
+
+.mobile-nav-item:hover,
+.mobile-nav-item.active {
+  color: var(--primary-color);
+}
+
+.mobile-nav-item.mobile-nav-center {
+  position: relative;
+  top: -12px;
+}
+
+.mobile-nav-item .center-icon-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+  font-size: 1.25rem;
+  margin-bottom: 2px;
+  border: 3px solid #ffffff;
+  transition: transform 0.2s ease;
+}
+
+.mobile-nav-item.active .center-icon-btn,
+.mobile-nav-item:hover .center-icon-btn {
+  transform: scale(1.08);
+}
+
+/* ==========================================================
    QR Scanner Area
    ========================================================== */
 
-#qr-reader {
+#reader {
   border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 2px dashed #94a3b8;
+  border: 2px dashed #cbd5e1;
   background: #f8fafc;
+  max-width: 100%;
 }
 
-#qr-reader__scan_region video {
+#reader video {
   border-radius: var(--radius-md);
+  width: 100% !important;
+  object-fit: cover;
 }
 
 /* ==========================================================
@@ -403,7 +531,7 @@ body {
    ========================================================== */
 
 @media print {
-  .sidebar, .top-navbar, .no-print, .btn, .nav-pills {
+  .sidebar, .top-navbar, .mobile-bottom-nav, .no-print, .btn, .nav-pills {
     display: none !important;
   }
   .main-content {
@@ -419,9 +547,10 @@ body {
 }
 
 /* ==========================================================
-   Responsive Adjustments
+   Responsive Breakpoints & Mobile Optimization
    ========================================================== */
 
+/* Tablets and below (< 992px) */
 @media (max-width: 991.98px) {
   .sidebar {
     transform: translateX(-100%);
@@ -431,5 +560,74 @@ body {
   }
   .main-content {
     margin-left: 0;
+  }
+  .top-navbar {
+    padding: 0 16px;
+    height: 60px;
+  }
+  .content-body {
+    padding: 16px;
+  }
+}
+
+/* Phones (< 768px) */
+@media (max-width: 767.98px) {
+  .content-body {
+    padding: 14px 12px;
+    padding-bottom: calc(var(--bottom-nav-height) + 20px);
+  }
+  
+  .content-card-body {
+    padding: 16px 14px;
+  }
+  
+  .content-card-header {
+    padding: 14px 16px;
+  }
+
+  .stat-card {
+    padding: 16px 14px;
+  }
+
+  .stat-value {
+    font-size: 1.4rem;
+  }
+
+  .stat-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 1.2rem;
+  }
+
+  .modal-dialog {
+    margin: 10px;
+  }
+
+  .custom-table thead th,
+  .custom-table tbody td {
+    padding: 10px 12px;
+    font-size: 0.82rem;
+  }
+
+  /* Optimize modal on small mobile screens */
+  .modal-dialog-centered {
+    min-height: calc(100% - 20px);
+  }
+  
+  .modal-content {
+    border-radius: var(--radius-lg);
+  }
+}
+
+/* Small Phones (< 576px) */
+@media (max-width: 575.98px) {
+  .stat-value {
+    font-size: 1.25rem;
+  }
+  .stat-label {
+    font-size: 0.72rem;
+  }
+  .content-card-title {
+    font-size: 0.95rem;
   }
 }

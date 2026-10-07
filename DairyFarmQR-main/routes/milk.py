@@ -10,43 +10,70 @@ milk_bp = Blueprint('milk', __name__)
 @milk_bp.route('/milk')
 @login_required
 def milk_list():
-    date_filter_str = request.args.get('date', '')
-    session_filter = request.args.get('session', '')
-    animal_filter = request.args.get('animal_id', '')
+    from_date_str = request.args.get('from_date', '').strip()
+    to_date_str = request.args.get('to_date', '').strip()
+    date_filter_str = request.args.get('date', '').strip()
+    session_filter = request.args.get('session', '').strip()
+    animal_filter = request.args.get('animal_id', '').strip()
+    page = request.args.get('page', 1, type=int)
 
     query = MilkProduction.query
 
-    if date_filter_str:
+    if from_date_str:
+        try:
+            from_d = datetime.strptime(from_date_str, '%Y-%m-%d').date()
+            query = query.filter(MilkProduction.date >= from_d)
+        except ValueError:
+            pass
+
+    if to_date_str:
+        try:
+            to_d = datetime.strptime(to_date_str, '%Y-%m-%d').date()
+            query = query.filter(MilkProduction.date <= to_d)
+        except ValueError:
+            pass
+
+    if not from_date_str and not to_date_str and date_filter_str:
         try:
             d = datetime.strptime(date_filter_str, '%Y-%m-%d').date()
             query = query.filter(MilkProduction.date == d)
         except ValueError:
             pass
+
     if session_filter:
         query = query.filter(MilkProduction.session == session_filter)
     if animal_filter:
-        query = query.filter(MilkProduction.animal_id == int(animal_filter))
+        try:
+            query = query.filter(MilkProduction.animal_id == int(animal_filter))
+        except ValueError:
+            pass
 
-    records = query.order_by(MilkProduction.date.desc(), MilkProduction.id.desc()).all()
+    # Summary calculations for current filtered view (across all matching records)
+    all_matched = query.all()
+    total_qty = round(sum(r.quantity_liters for r in all_matched), 2)
+    total_revenue = round(sum(r.total_amount for r in all_matched), 2)
+    morning_qty = round(sum(r.quantity_liters for r in all_matched if r.session == 'Morning'), 2)
+    evening_qty = round(sum(r.quantity_liters for r in all_matched if r.session == 'Evening'), 2)
+    avg_fat = round(sum(r.fat_percentage for r in all_matched) / len(all_matched), 2) if all_matched else 0.0
 
-    # Summary calculations for current filtered view
-    total_qty = round(sum(r.quantity_liters for r in records), 2)
-    total_revenue = round(sum(r.total_amount for r in records), 2)
-    morning_qty = round(sum(r.quantity_liters for r in records if r.session == 'Morning'), 2)
-    evening_qty = round(sum(r.quantity_liters for r in records if r.session == 'Evening'), 2)
-    avg_fat = round(sum(r.fat_percentage for r in records) / len(records), 2) if records else 0.0
+    # 5 entries per page
+    pagination = query.order_by(MilkProduction.date.desc(), MilkProduction.id.desc()).paginate(page=page, per_page=5, error_out=False)
+    records = pagination.items
 
     animals = Animal.query.filter_by(milking_status='Milking').order_by(Animal.tag_number).all()
 
     return render_template(
         'milk_production.html',
         records=records,
+        pagination=pagination,
         animals=animals,
         total_qty=total_qty,
         total_revenue=total_revenue,
         morning_qty=morning_qty,
         evening_qty=evening_qty,
         avg_fat=avg_fat,
+        from_date=from_date_str,
+        to_date=to_date_str,
         selected_date=date_filter_str,
         selected_session=session_filter,
         selected_animal=animal_filter,

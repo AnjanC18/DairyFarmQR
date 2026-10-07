@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, date
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
 from flask_login import login_required, current_user
 from models import db
 from models.animal import Animal
@@ -10,6 +10,34 @@ from utils.qr_helper import generate_animal_qr
 
 animal_bp = Blueprint('animal', __name__)
 
+@animal_bp.route('/api/animals/search')
+@login_required
+def api_search_animals():
+    q = request.args.get('q', '').strip()
+    if not q:
+        return jsonify([])
+    
+    animals = Animal.query.filter(
+        (Animal.tag_number.ilike(f"%{q}%")) |
+        (Animal.name.ilike(f"%{q}%")) |
+        (Animal.breed.ilike(f"%{q}%"))
+    ).limit(10).all()
+    
+    results = []
+    for a in animals:
+        results.append({
+            'id': a.id,
+            'tag_number': a.tag_number,
+            'name': a.name or '',
+            'species': a.species,
+            'breed': a.breed,
+            'milking_status': a.milking_status,
+            'health_status': a.health_status,
+            'url': url_for('animal.animal_detail', id=a.id),
+            'qr_image': a.qr_code_image
+        })
+    return jsonify(results)
+
 @animal_bp.route('/animals')
 @login_required
 def list_animals():
@@ -17,6 +45,7 @@ def list_animals():
     species = request.args.get('species', '').strip()
     status = request.args.get('status', '').strip()
     health = request.args.get('health', '').strip()
+    page = request.args.get('page', 1, type=int)
 
     query = Animal.query
 
@@ -29,7 +58,9 @@ def list_animals():
     if health:
         query = query.filter(Animal.health_status == health)
 
-    animals = query.order_by(Animal.id.desc()).all()
+    # 10 cattle per page
+    pagination = query.order_by(Animal.id.desc()).paginate(page=page, per_page=10, error_out=False)
+    animals = pagination.items
     
     # Counts for quick filter pills
     total_count = Animal.query.count()
@@ -40,6 +71,7 @@ def list_animals():
     return render_template(
         'animals.html',
         animals=animals,
+        pagination=pagination,
         search=search,
         selected_species=species,
         selected_status=status,
@@ -53,6 +85,10 @@ def list_animals():
 @animal_bp.route('/animals/add', methods=['GET', 'POST'])
 @login_required
 def add_animal():
+    if not current_user.is_manager():
+        flash('Access denied. Staff members cannot register or add new cattle.', 'danger')
+        return redirect(url_for('animal.list_animals'))
+
     if request.method == 'POST':
         tag_number = request.form.get('tag_number', '').strip().upper()
         name = request.form.get('name', '').strip()
@@ -136,6 +172,10 @@ def animal_detail(id):
 @animal_bp.route('/animals/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_animal(id):
+    if not current_user.is_manager():
+        flash('Access denied. Staff members cannot edit cattle records.', 'danger')
+        return redirect(url_for('animal.animal_detail', id=id))
+
     animal = Animal.query.get_or_404(id)
 
     if request.method == 'POST':
@@ -186,6 +226,10 @@ def edit_animal(id):
 @animal_bp.route('/animals/delete/<int:id>', methods=['POST'])
 @login_required
 def delete_animal(id):
+    if not current_user.is_manager():
+        flash('Access denied. Staff members cannot delete cattle records.', 'danger')
+        return redirect(url_for('animal.list_animals'))
+
     animal = Animal.query.get_or_404(id)
     tag = animal.tag_number
     

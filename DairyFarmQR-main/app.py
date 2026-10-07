@@ -1,6 +1,8 @@
+import socket
 from datetime import date, timedelta
 from flask import Flask, render_template
 from flask_login import LoginManager
+from sqlalchemy import func
 from config import Config
 from models import db
 from models.user import User
@@ -10,6 +12,18 @@ from models.feed import FeedInventory, FeedConsumption
 from models.vaccination import Vaccination
 from models.employee import Employee
 from models.expense import Expense
+from utils.qr_helper import generate_animal_qr
+
+def get_network_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = '127.0.0.1'
+    finally:
+        s.close()
+    return ip
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -27,6 +41,15 @@ def create_app(config_class=Config):
     @login_manager.user_loader
     def load_user(user_id):
         return db.session.get(User, int(user_id))
+
+    # Context processor for mobile access from local network
+    @app.context_processor
+    def inject_mobile_access():
+        local_ip = get_network_ip()
+        return {
+            'local_ip': local_ip,
+            'mobile_url': f"http://{local_ip}:5000"
+        }
 
     # Register blueprints
     from routes.auth import auth_bp
@@ -72,19 +95,47 @@ def create_app(config_class=Config):
     return app
 
 def seed_initial_data(app):
-    # 1. Admin User
-    admin = User.query.filter_by(username='admin').first()
+    # 1. Admin, Manager, and Staff Default Accounts
+    admin = User.query.filter(func.lower(User.username) == 'admin').first()
     if not admin:
         admin = User(
             username='admin',
             email='admin@dairy.com',
-            full_name='Farm Manager Admin',
-            role='admin'
+            full_name='Farm Administrator',
+            role='admin',
+            is_active=True
         )
         admin.set_password('admin123')
         db.session.add(admin)
-        db.session.commit()
         print("[Seed] Created default admin user: admin / admin123")
+
+    manager = User.query.filter(func.lower(User.username) == 'manager').first()
+    if not manager:
+        manager = User(
+            username='manager',
+            email='manager@dairy.com',
+            full_name='Dairy Farm Manager',
+            role='manager',
+            is_active=True
+        )
+        manager.set_password('manager123')
+        db.session.add(manager)
+        print("[Seed] Created default manager user: manager / manager123")
+
+    staff = User.query.filter(func.lower(User.username) == 'staff').first()
+    if not staff:
+        staff = User(
+            username='staff',
+            email='staff@dairy.com',
+            full_name='Dairy Farm Staff',
+            role='staff',
+            is_active=True
+        )
+        staff.set_password('staff123')
+        db.session.add(staff)
+        print("[Seed] Created default staff user: staff / staff123")
+
+    db.session.commit()
 
     # 2. Sample Cattle
     if Animal.query.count() == 0:
@@ -223,9 +274,14 @@ def seed_initial_data(app):
 app = create_app()
 
 if __name__ == '__main__':
+    local_ip = get_network_ip()
     print("==========================================================")
-    print(" SMART DAIRY FARM MANAGEMENT SYSTEM - MCA MINOR PROJECT")
-    print(" Running locally on http://localhost:5000")
-    print(" Login: admin / admin123")
+    print(" SMART DAIRY FARM MANAGEMENT SYSTEM")
+    print(f" Local URL:   http://localhost:5000")
+    print(f" Network URL: http://{local_ip}:5000 (Mobile & LAN)")
+    print(" Default Logins:")
+    print("   Admin:   admin   / admin123")
+    print("   Manager: manager / manager123")
+    print("   Staff:   staff   / staff123")
     print("==========================================================")
     app.run(debug=True, host='0.0.0.0', port=5000)
