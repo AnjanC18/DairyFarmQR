@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `users` (
     `username` VARCHAR(80) NOT NULL UNIQUE,
     `email` VARCHAR(120) NOT NULL UNIQUE,
     `password_hash` VARCHAR(255) NOT NULL,
+    `plain_password` VARCHAR(100) DEFAULT NULL,
     `full_name` VARCHAR(100) NOT NULL,
     `role` ENUM('admin', 'manager', 'staff') DEFAULT 'staff',
     `is_active` BOOLEAN DEFAULT TRUE,

@@ -161,7 +161,114 @@
   </div>
 </div>
 
-<!-- Tabs: Milk Production History & Vaccination Records -->
+<!-- Anomaly Early Illness Warning Banner (if flagged) -->
+{% if cow_anomalies %}
+  <div class="alert alert-danger shadow-sm border-danger border-2 rounded-3 mb-4 p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="bg-danger text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1.25rem;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div>
+        <span class="badge bg-danger mb-1">Early Illness Alert</span>
+        <h5 class="fw-bold mb-1 text-danger">{{ cow_anomalies[0].alert_text }}</h5>
+        <div class="small text-dark">
+          Latest yield was <strong>{{ cow_anomalies[0].latest_yield }} L</strong> vs her 7-day baseline of <strong>{{ cow_anomalies[0].avg_7day }} L</strong>.
+          Z-score deviation: <strong class="text-danger">{{ cow_anomalies[0].z_score }}&sigma;</strong>.
+          Action advice: {{ cow_anomalies[0].action_advice }}
+        </div>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('treatment.treatment_list', animal_id=animal.id) }}" class="btn btn-danger btn-sm">
+        <i class="fa-solid fa-notes-medical me-1"></i> Log Medical Treatment
+      </a>
+    </div>
+  </div>
+{% endif %}
+
+<!-- AI Intelligence & Predictive Health Row -->
+<div class="row g-4 mb-4">
+  <!-- 14-Day Individual Yield Forecast Chart -->
+  <div class="col-xl-8">
+    <div class="content-card h-100">
+      <div class="content-card-header d-flex justify-content-between align-items-center">
+        <h5 class="content-card-title mb-0">
+          <i class="fa-solid fa-wand-magic-sparkles text-primary me-2"></i>
+          AI 14-Day Individual Milk Forecast
+        </h5>
+        {% if cow_forecast %}
+          <span class="badge bg-primary-subtle text-primary border border-primary">
+            Proj: {{ cow_forecast.total_forecast_liters }} L (Avg {{ cow_forecast.avg_daily_forecast }} L/day)
+          </span>
+        {% endif %}
+      </div>
+      <div class="content-card-body">
+        <div style="height: 250px;">
+          <canvas id="individualForecastChart"></canvas>
+        </div>
+        <div class="small text-muted text-center mt-2">
+          <span class="badge bg-primary me-1">&bull; Past Actuals</span>
+          <span class="badge bg-info text-dark ms-2 me-1">-- Machine Learning 14-Day Forecast</span>
+          <span class="badge bg-light text-muted border ms-2 me-1">95% Confidence Band</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mastitis Risk Meter & Ration Box -->
+  <div class="col-xl-4">
+    <div class="content-card h-100 d-flex flex-column justify-content-between">
+      <div class="content-card-header">
+        <h5 class="content-card-title mb-0">
+          <i class="fa-solid fa-shield-virus text-warning me-2"></i>
+          Mastitis Risk & Nutrition
+        </h5>
+      </div>
+      <div class="content-card-body">
+        {% if mastitis_info %}
+          <div class="p-3 rounded-3 bg-light border mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="fw-bold small">Mastitis Risk Meter</span>
+              <span class="badge bg-{{ mastitis_info.badge_class }}-subtle text-{{ mastitis_info.badge_class }} border border-{{ mastitis_info.badge_class }}">
+                {{ mastitis_info.risk_level }}
+              </span>
+            </div>
+            <div class="progress mb-2" style="height: 10px;">
+              <div class="progress-bar bg-{{ mastitis_info.badge_class }}" style="width: {{ mastitis_info.risk_score }}%;"></div>
+            </div>
+            <div class="d-flex justify-content-between small text-muted">
+              <span>Risk: <strong class="text-{{ mastitis_info.badge_class }}">{{ mastitis_info.risk_score }}%</strong></span>
+              <span>Fat: {{ mastitis_info.current_fat }}% &bull; SNF: {{ mastitis_info.current_snf }}%</span>
+            </div>
+            <div class="small text-dark mt-2 pt-2 border-top">
+              <strong>Directive:</strong> {{ mastitis_info.recommendation }}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if cow_ration %}
+          <div class="p-3 rounded-3 bg-light border">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="fw-bold small"><i class="fa-solid fa-wheat-awn text-success me-1"></i> Daily Nutritional Ration (LP)</span>
+              <span class="fw-bold text-success small">₹{{ cow_ration.total_daily_cost }}/day</span>
+            </div>
+            <div class="small text-muted mb-2">Target Dry Matter: {{ cow_ration.delivered_dm }} kg</div>
+            <ul class="list-unstyled mb-0 small">
+              {% for item in cow_ration.ration_items %}
+                <li class="d-flex justify-content-between text-muted py-1 border-bottom">
+                  <span>{{ item.category }}:</span>
+                  <strong class="text-dark">{{ item.quantity_kg }} kg</strong>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs: Milk Production History, Vaccination Records & Medical Treatments -->
 <div class="content-card">
   <div class="content-card-header p-2">
     <ul class="nav nav-pills" id="animalTab" role="tablist">
@@ -172,7 +279,12 @@
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link fw-bold py-2 px-4" id="vaccine-tab" data-bs-toggle="pill" data-bs-target="#vaccine-pane" type="button" role="tab">
-          <i class="fa-solid fa-syringe me-2"></i> Health & Vaccinations ({{ vaccinations|length }})
+          <i class="fa-solid fa-syringe me-2"></i> Vaccinations ({{ vaccinations|length }})
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold py-2 px-4" id="treatment-tab" data-bs-toggle="pill" data-bs-target="#treatment-pane" type="button" role="tab">
+          <i class="fa-solid fa-notes-medical me-2"></i> Medical & Treatment History ({{ treatments|length }})
         </button>
       </li>
     </ul>
@@ -277,7 +389,155 @@
           </table>
         </div>
       </div>
+
+      <!-- Medical Treatments Tab -->
+      <div class="tab-pane fade" id="treatment-pane" role="tabpanel">
+        <div class="p-3 d-flex justify-content-between align-items-center border-bottom bg-light">
+          <div>
+            <h6 class="fw-bold mb-0">Veterinary Clinical History & Treatments</h6>
+            <small class="text-muted">Recorded medical interventions, antibiotics, and milk withdrawal tracking</small>
+          </div>
+          {% if current_user.is_manager() %}
+          <a href="{{ url_for('treatment.treatment_list', animal_id=animal.id) }}" class="btn btn-danger btn-sm">
+            <i class="fa-solid fa-plus me-1"></i> Log New Treatment
+          </a>
+          {% endif %}
+        </div>
+        <div class="table-responsive">
+          <table class="table custom-table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Diagnosis</th>
+                <th>Symptoms</th>
+                <th>Treatment / Medication</th>
+                <th>Milk Withdrawal</th>
+                <th>Veterinarian</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for t in treatments %}
+                <tr>
+                  <td class="fw-bold">{{ t.administered_date.strftime('%d %b %Y') }}</td>
+                  <td>
+                    <span class="badge {% if 'mastitis' in t.diagnosis|lower %}bg-danger{% else %}bg-secondary{% endif %}">
+                      {{ t.diagnosis }}
+                    </span>
+                  </td>
+                  <td class="small text-muted">{{ t.symptoms or 'N/A' }}</td>
+                  <td class="fw-semibold">{{ t.treatment_given }}</td>
+                  <td>
+                    {% if t.is_in_withdrawal %}
+                      <span class="badge bg-danger">Withholding ({{ t.withdrawal_days_remaining }}d left)</span>
+                    {% else %}
+                      <span class="badge bg-success-subtle text-success border border-success">Cleared</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ t.veterinarian or 'Staff' }}</td>
+                  <td>
+                    <span class="badge bg-{{ 'danger' if t.status == 'Under Treatment' else 'success' }}-subtle text-{{ 'danger' if t.status == 'Under Treatment' else 'success' }} border border-{{ 'danger' if t.status == 'Under Treatment' else 'success' }}">
+                      {{ t.status }}
+                    </span>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="7" class="text-center py-4 text-muted">No medical treatments logged for this animal. Record is healthy!</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
 {% endblock %}
+
+{% block extra_scripts %}
+{% if cow_forecast %}
+<script>
+  // Individual Cow Milk Forecast Chart
+  const ctxCowForecast = document.getElementById('individualForecastChart').getContext('2d');
+  const cowHistDates = {{ cow_forecast.historical_dates | tojson }};
+  const cowHistLiters = {{ cow_forecast.historical_liters | tojson }};
+  const cowFutDates = {{ cow_forecast.dates | tojson }};
+  const cowFutLiters = {{ cow_forecast.forecast_liters | tojson }};
+  const cowLower = {{ cow_forecast.lower_bound | tojson }};
+  const cowUpper = {{ cow_forecast.upper_bound | tojson }};
+
+  const cowAllDates = [...cowHistDates, ...cowFutDates];
+  const cowHistLine = [...cowHistLiters, ...Array(cowFutDates.length).fill(null)];
+  const lastVal = cowHistLiters.length > 0 ? cowHistLiters[cowHistLiters.length - 1] : 0;
+  const cowFutLine = [...Array(Math.max(0, cowHistDates.length - 1)).fill(null), lastVal, ...cowFutLiters];
+  const cowUpperLine = [...Array(Math.max(0, cowHistDates.length - 1)).fill(null), lastVal, ...cowUpper];
+  const cowLowerLine = [...Array(Math.max(0, cowHistDates.length - 1)).fill(null), lastVal, ...cowLower];
+
+  new Chart(ctxCowForecast, {
+    type: 'line',
+    data: {
+      labels: cowAllDates,
+      datasets: [
+        {
+          label: 'Historical Yield (L)',
+          data: cowHistLine,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          fill: false,
+          tension: 0.3,
+          borderWidth: 2,
+          pointRadius: 3
+        },
+        {
+          label: 'AI 14-Day Forecast (L)',
+          data: cowFutLine,
+          borderColor: '#06b6d4',
+          borderDash: [5, 4],
+          fill: false,
+          tension: 0.3,
+          borderWidth: 2,
+          pointRadius: 3
+        },
+        {
+          label: 'Upper Band',
+          data: cowUpperLine,
+          borderColor: 'transparent',
+          backgroundColor: 'rgba(6, 182, 212, 0.1)',
+          fill: '+1',
+          pointRadius: 0
+        },
+        {
+          label: 'Lower Band',
+          data: cowLowerLine,
+          borderColor: 'transparent',
+          backgroundColor: 'transparent',
+          fill: false,
+          pointRadius: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            filter: function(item) {
+              return !item.text.includes('Band');
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, title: { display: true, text: 'Liters' } }
+      }
+    }
+  });
+</script>
+{% endif %}
+{% endblock %}
+

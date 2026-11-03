@@ -20,6 +20,24 @@
   </div>
 </div>
 
+<!-- AI Yield Anomaly Early Illness Warning Banner -->
+{% if anomalies %}
+<div class="alert alert-danger shadow-sm border-danger border-2 rounded-3 mb-4 p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+  <div class="d-flex align-items-center gap-3">
+    <div class="bg-danger text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+    <div>
+      <div class="fw-bold text-danger">{{ anomalies[0].alert_text }}</div>
+      <div class="small text-dark">Recent yield: <strong>{{ anomalies[0].latest_yield }} L</strong> (7-day baseline: {{ anomalies[0].avg_7day }} L &bull; Drop: <strong class="text-danger">-{{ anomalies[0].drop_percentage }}%</strong>). Possible mastitis or illness.</div>
+    </div>
+  </div>
+  <a href="{{ url_for('ai.ai_hub') }}#tab-anomalies" class="btn btn-sm btn-danger">
+    <i class="fa-solid fa-brain me-1"></i> View AI Health Report
+  </a>
+</div>
+{% endif %}
+
 <!-- Summary Metric Cards for Selected View -->
 <div class="row g-3 mb-4">
   <div class="col-xl-3 col-sm-6">

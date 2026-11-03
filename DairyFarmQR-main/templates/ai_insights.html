@@ -1,0 +1,1026 @@
+{% extends "layout.html" %}
+
+{% block title %}AI Farm Intelligence & Machine Learning Hub - Smart Dairy{% endblock %}
+{% block page_title %}AI Farm Intelligence & Machine Learning Hub{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h3 class="fw-bold mb-1 text-dark">
+      <i class="fa-solid fa-brain text-primary me-2"></i>AI Farm Intelligence & Analytics Hub
+    </h3>
+    <p class="text-muted small mb-0">
+      Autonomous predictive models: <strong>Milk Forecasting &bull; Anomaly Early Illness Warning &bull; Mastitis Risk Radar &bull; Cull/Keep K-Means &bull; Feed LP Optimization &bull; Financial Time-Series</strong>
+    </p>
+  </div>
+  <div class="d-flex gap-2 no-print">
+    <a href="{{ url_for('report.reports') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="fa-solid fa-chart-pie me-1"></i> Farm Reports
+    </a>
+    <button onclick="window.print()" class="btn btn-outline-dark btn-sm">
+      <i class="fa-solid fa-print me-1"></i> Print Intelligence Brief
+    </button>
+  </div>
+</div>
+
+<!-- Critical Anomaly / Mastitis Early Warning Banner (if any) -->
+{% if anomalies %}
+  <div class="alert alert-danger shadow-sm border-danger border-2 rounded-3 mb-4 p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="bg-danger text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1.25rem;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div>
+        <h6 class="fw-bold mb-1 text-danger">Early Illness Warning: {{ anomalies|length }} Cattle Flagged With Sharp Yield Drops</h6>
+        <div class="small text-dark">
+          <strong>{{ anomalies[0].alert_text }}</strong>
+          {% if anomalies|length > 1 %}
+            <span>(and {{ anomalies|length - 1 }} other cattle require health inspection).</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="#tab-anomalies" onclick="activateTab('anomalies-tab')" class="btn btn-danger btn-sm px-3">
+        <i class="fa-solid fa-stethoscope me-1"></i> Review Health Alerts
+      </a>
+      {% if current_user.is_manager() %}
+      <a href="{{ url_for('treatment.treatment_list') }}" class="btn btn-outline-danger btn-sm bg-white">
+        <i class="fa-solid fa-notes-medical me-1"></i> Treatment Log
+      </a>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+<!-- Executive AI KPI Summary Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-xl-3 col-sm-6">
+    <div class="stat-card" style="--card-accent: #2563eb;">
+      <div>
+        <div class="stat-label">14-Day Herd Milk Forecast</div>
+        <div class="stat-value text-primary">{{ herd_forecast.total_forecast_liters }} <span class="fs-6 text-muted">L</span></div>
+        <div class="small text-muted mt-1">Avg <strong>{{ herd_forecast.avg_daily_forecast }} L/day</strong> projected</div>
+      </div>
+      <div class="stat-icon primary"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-sm-6">
+    <div class="stat-card" style="--card-accent: {% if anomalies %}#ef4444{% else %}#10b981{% endif %};">
+      <div>
+        <div class="stat-label">Yield Anomaly Flags</div>
+        <div class="stat-value {% if anomalies %}text-danger{% else %}text-success{% endif %}">
+          {{ anomalies|length }} <span class="fs-6 text-muted">Cattle</span>
+        </div>
+        <div class="small text-muted mt-1">{% if anomalies %}Sharp drop detected vs 7d avg{% else %}Herd yields consistent{% endif %}</div>
+      </div>
+      <div class="stat-icon {% if anomalies %}danger{% else %}success{% endif %}">
+        <i class="fa-solid fa-heart-pulse"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-sm-6">
+    <div class="stat-card" style="--card-accent: {% if high_mastitis_count > 0 %}#f59e0b{% else %}#10b981{% endif %};">
+      <div>
+        <div class="stat-label">Mastitis Risk Watch</div>
+        <div class="stat-value {% if high_mastitis_count > 0 %}text-warning{% else %}text-success{% endif %}">
+          {{ high_mastitis_count }} <span class="fs-6 text-muted">High Risk</span>
+        </div>
+        <div class="small text-muted mt-1">{{ mod_mastitis_count }} under moderate observation</div>
+      </div>
+      <div class="stat-icon {% if high_mastitis_count > 0 %}warning{% else %}success{% endif %}">
+        <i class="fa-solid fa-shield-virus"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-3 col-sm-6">
+    <div class="stat-card" style="--card-accent: #10b981;">
+      <div>
+        <div class="stat-label">Next Month Net Profit Proj.</div>
+        <div class="stat-value text-success">₹{{ financial_forecast.total_projected_net_profit }}</div>
+        <div class="small text-muted mt-1">Margin: <strong>{{ financial_forecast.profit_margin_pct }}%</strong></div>
+      </div>
+      <div class="stat-icon success"><i class="fa-solid fa-coins"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Interactive Navigation Tabs -->
+<div class="content-card mb-4">
+  <div class="content-card-header p-2 bg-light border-bottom">
+    <ul class="nav nav-pills flex-wrap" id="aiTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active fw-bold py-2 px-3" id="forecast-tab" data-bs-toggle="pill" data-bs-target="#tab-forecast" type="button" role="tab">
+          <i class="fa-solid fa-chart-line me-1 text-primary"></i> 1. Milk Yield Forecasting
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold py-2 px-3" id="anomalies-tab" data-bs-toggle="pill" data-bs-target="#tab-anomalies" type="button" role="tab">
+          <i class="fa-solid fa-triangle-exclamation me-1 text-danger"></i> 2. Anomaly Illness Detection
+          {% if anomalies %}<span class="badge bg-danger ms-1">{{ anomalies|length }}</span>{% endif %}
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold py-2 px-3" id="mastitis-tab" data-bs-toggle="pill" data-bs-target="#tab-mastitis" type="button" role="tab">
+          <i class="fa-solid fa-shield-virus me-1 text-warning"></i> 3. Mastitis Risk Radar
+          {% if high_mastitis_count > 0 %}<span class="badge bg-warning text-dark ms-1">{{ high_mastitis_count }}</span>{% endif %}
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold py-2 px-3" id="cull-tab" data-bs-toggle="pill" data-bs-target="#tab-cull" type="button" role="tab">
+          <i class="fa-solid fa-layer-group me-1 text-info"></i> 4. Cull & Keep K-Means
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold py-2 px-3" id="feed-tab" data-bs-toggle="pill" data-bs-target="#tab-feed" type="button" role="tab">
+          <i class="fa-solid fa-wheat-awn me-1 text-success"></i> 5. Feed Optimization & Stockout
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold py-2 px-3" id="financials-tab" data-bs-toggle="pill" data-bs-target="#tab-financials" type="button" role="tab">
+          <i class="fa-solid fa-sack-dollar me-1 text-primary"></i> 6. Financial Forecasting
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <div class="content-card-body p-4">
+    <div class="tab-content" id="aiTabContent">
+      
+      <!-- ================================================================= -->
+      <!-- TAB 1: MILK YIELD FORECASTING                                     -->
+      <!-- ================================================================= -->
+      <div class="tab-pane fade show active" id="tab-forecast" role="tabpanel">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 pb-3 border-bottom">
+          <div>
+            <h5 class="fw-bold mb-1">Cattle & Herd Milk Yield Forecasting (7 to 14 Days)</h5>
+            <p class="text-muted small mb-0">
+              Trained on past yields, lactation stages, milking sessions (Morning/Evening), breeds, and body condition using <strong>Random Forest Regressor & Gradient Boosting</strong>.
+            </p>
+          </div>
+          <!-- Selector: Herd vs Specific Cow -->
+          <form method="GET" action="{{ url_for('ai.ai_hub') }}" class="d-flex align-items-center gap-2">
+            <label class="small fw-bold text-nowrap">Model Target:</label>
+            <select name="animal_id" class="form-select form-select-sm" onchange="this.form.submit()">
+              <option value="" {% if not selected_cow_id %}selected{% endif %}>Whole Farm Herd (All Active Milking)</option>
+              {% for cow in milking_cows %}
+                <option value="{{ cow.id }}" {% if selected_cow_id == cow.id %}selected{% endif %}>
+                  {{ cow.tag_number }} - {{ cow.name or cow.breed }}
+                </option>
+              {% endfor %}
+            </select>
+            <select name="days" class="form-select form-select-sm" onchange="this.form.submit()">
+              <option value="7" {% if forecast_days == 7 %}selected{% endif %}>7 Days Horizon</option>
+              <option value="14" {% if forecast_days == 14 %}selected{% endif %}>14 Days Horizon</option>
+            </select>
+          </form>
+        </div>
+
+        <!-- Forecasting Metrics Cards -->
+        {% set active_f = cow_forecast if selected_cow_id and cow_forecast else herd_forecast %}
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="p-3 rounded-3 bg-light border">
+              <div class="text-muted small">Projected Total Yield ({{ forecast_days }} Days)</div>
+              <div class="h3 fw-bold text-primary mb-1">{{ active_f.total_forecast_liters }} <span class="fs-6 text-muted">Liters</span></div>
+              <div class="small text-muted">Expected revenue @ ₹42/L: <strong>₹{{ (active_f.total_forecast_liters * 42.0)|round(2) }}</strong></div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 rounded-3 bg-light border">
+              <div class="text-muted small">Projected Daily Average</div>
+              <div class="h3 fw-bold text-success mb-1">{{ active_f.avg_daily_forecast }} <span class="fs-6 text-muted">L / day</span></div>
+              <div class="small text-muted">Consistent lactation trajectory</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 rounded-3 bg-light border">
+              <div class="text-muted small">Session Breakdown (Projected)</div>
+              <div class="d-flex justify-content-between align-items-center mt-2">
+                <div>
+                  <span class="badge bg-warning text-dark"><i class="fa-solid fa-sun me-1"></i> Morning</span>
+                  <div class="fw-bold mt-1">{{ active_f.morning_forecast[0] if active_f.morning_forecast else 0 }} L/day</div>
+                </div>
+                <div class="border-start ps-3">
+                  <span class="badge bg-indigo text-white" style="background-color: #6366f1;"><i class="fa-solid fa-moon me-1"></i> Evening</span>
+                  <div class="fw-bold mt-1">{{ active_f.evening_forecast[0] if active_f.evening_forecast else 0 }} L/day</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Forecast Chart.js -->
+        <div class="content-card mb-4">
+          <div class="content-card-body">
+            <div style="height: 360px;">
+              <canvas id="hubForecastChart"></canvas>
+            </div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top small text-muted">
+              <div>
+                <span class="badge bg-primary me-1">&bull; Solid Blue</span> Past 14 Days Actuals
+                <span class="badge bg-info text-dark ms-3 me-1">-- Dashed Cyan</span> Machine Learning 7-14 Day Forecast
+                <span class="badge bg-light text-muted border ms-3 me-1">Light Shaded Area</span> 95% Confidence Interval
+              </div>
+              <div>
+                Target: <strong>{% if selected_cow_id %}{{ active_f.animal_name if active_f.animal_name else 'Selected Cattle' }}{% else %}Whole Farm Herd ({{ herd_forecast.cows_modeled }} cows){% endif %}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Day by Day Projection Table -->
+        <h6 class="fw-bold mb-2">Detailed Day-by-Day Forecast Schedule</h6>
+        <div class="table-responsive">
+          <table class="table custom-table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Forecast Date</th>
+                <th>Projected Morning (L)</th>
+                <th>Projected Evening (L)</th>
+                <th>Total Daily Forecast (L)</th>
+                <th>95% Confidence Band</th>
+                <th>Estimated Daily Value (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in range(active_f.dates|length) %}
+                <tr>
+                  <td class="fw-bold">{{ active_f.dates[i] }}</td>
+                  <td>{{ active_f.morning_forecast[i] }} L</td>
+                  <td>{{ active_f.evening_forecast[i] }} L</td>
+                  <td class="fw-bold text-primary">{{ active_f.forecast_liters[i] }} L</td>
+                  <td class="text-muted small">
+                    [{{ active_f.lower_bound[i] }} L &mdash; {{ active_f.upper_bound[i] }} L]
+                  </td>
+                  <td class="fw-bold text-success">₹{{ (active_f.forecast_liters[i] * 42.0)|round(2) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- TAB 2: ANOMALY DETECTION (Early Illness Warning)                  -->
+      <!-- ================================================================= -->
+      <div class="tab-pane fade" id="tab-anomalies" role="tabpanel">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 pb-3 border-bottom">
+          <div>
+            <h5 class="fw-bold mb-1">Early Illness Anomaly Detection</h5>
+            <p class="text-muted small mb-0">
+              Flags cows whose yield drops sharply compared with her own recent 7-day average, signaling early mastitis, heat stress, ketosis, or systemic infection.
+              Engine: <strong>7-Day Rolling Window with Z-Score & scikit-learn Isolation Forest</strong>.
+            </p>
+          </div>
+          <div>
+            <span class="badge bg-danger-subtle text-danger border border-danger px-3 py-2">
+              <i class="fa-solid fa-bell me-1"></i> {{ anomalies|length }} Active Anomaly Alerts
+            </span>
+          </div>
+        </div>
+
+        {% if anomalies %}
+          <div class="row g-3 mb-4">
+            {% for a in anomalies %}
+              <div class="col-lg-6">
+                <div class="p-3 rounded-3 border {% if a.severity == 'CRITICAL' %}border-danger bg-danger-subtle bg-opacity-25{% elif a.severity == 'WARNING' %}border-warning bg-warning-subtle bg-opacity-25{% else %}border-info bg-light{% endif %} h-100 shadow-sm">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="badge {% if a.severity == 'CRITICAL' %}bg-danger{% elif a.severity == 'WARNING' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %} px-2 py-1">
+                        {{ a.severity }} ANOMALY
+                      </span>
+                      <h6 class="fw-bold mb-0">
+                        <a href="{{ url_for('animal.animal_detail', id=a.animal_id) }}" class="text-dark text-decoration-none">
+                          {{ a.tag_number }}
+                        </a>
+                        {% if a.name and a.name != 'No Nickname' %}<span class="text-muted small">({{ a.name }})</span>{% endif %}
+                      </h6>
+                    </div>
+                    <span class="text-muted small">{{ a.date }}</span>
+                  </div>
+
+                  <!-- Alert Statement as requested -->
+                  <div class="p-2 rounded bg-white border mb-3">
+                    <div class="fw-bold text-danger fs-6 mb-1">
+                      <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                      {{ a.alert_text }}
+                    </div>
+                    <div class="small text-muted">
+                      Latest Yield: <strong>{{ a.latest_yield }} L</strong> (Normal 7-day avg: <strong>{{ a.avg_7day }} L</strong> &bull; Drop: <span class="text-danger fw-bold">-{{ a.drop_liters }} L / -{{ a.drop_percentage }}%</span>)
+                    </div>
+                  </div>
+
+                  <div class="row g-2 mb-3 small">
+                    <div class="col-4">
+                      <div class="text-muted">Z-Score Deviation:</div>
+                      <div class="fw-bold text-danger">{{ a.z_score }} &sigma;</div>
+                    </div>
+                    <div class="col-4">
+                      <div class="text-muted">Milk Fat / SNF:</div>
+                      <div class="fw-bold">{{ a.fat_percentage }}% / {{ a.snf_percentage }}%</div>
+                    </div>
+                    <div class="col-4">
+                      <div class="text-muted">Isolation Forest:</div>
+                      <div class="fw-bold text-danger">Outlier Detected</div>
+                    </div>
+                  </div>
+
+                  <div class="p-2 rounded bg-light border small text-dark mb-3">
+                    <strong>Recommended Action:</strong> {{ a.action_advice }}
+                  </div>
+
+                  <div class="d-flex gap-2">
+                    <a href="{{ url_for('animal.animal_detail', id=a.animal_id) }}" class="btn btn-sm btn-outline-primary flex-grow-1">
+                      <i class="fa-solid fa-id-card me-1"></i> View Profile
+                    </a>
+                    {% if current_user.is_manager() %}
+                    <a href="{{ url_for('treatment.treatment_list', animal_id=a.animal_id) }}" class="btn btn-sm btn-danger flex-grow-1">
+                      <i class="fa-solid fa-stethoscope me-1"></i> Log Medical Treatment
+                    </a>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="p-5 text-center bg-light rounded-3 border">
+            <div class="text-success mb-2" style="font-size: 2.5rem;"><i class="fa-solid fa-circle-check"></i></div>
+            <h5 class="fw-bold text-dark">No Abnormal Yield Crashes Detected</h5>
+            <p class="text-muted small mb-0">All milking cattle are producing within &plusmn;1.5 standard deviations of their personal 7-day baseline.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- TAB 3: MASTITIS RISK PREDICTION RADAR                             -->
+      <!-- ================================================================= -->
+      <div class="tab-pane fade" id="tab-mastitis" role="tabpanel">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 pb-3 border-bottom">
+          <div>
+            <h5 class="fw-bold mb-1">Mastitis Risk Prediction Radar</h5>
+            <p class="text-muted small mb-0">
+              Combines milk yield drops, fat/SNF biochemical changes, and past treatments into a clinical mastitis risk score (0-100%).
+              Model: <strong>Calibrated Logistic Regression & Random Forest Risk Classifier</strong>.
+            </p>
+          </div>
+          <div class="d-flex gap-2">
+            <span class="badge bg-danger">{{ high_mastitis_count }} High Risk (&ge;70%)</span>
+            <span class="badge bg-warning text-dark">{{ mod_mastitis_count }} Moderate (40-69%)</span>
+            <span class="badge bg-success">{{ mastitis_records|length - high_mastitis_count - mod_mastitis_count }} Low Risk</span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table custom-table align-middle">
+            <thead>
+              <tr>
+                <th>Cattle Tag / Breed</th>
+                <th>Mastitis Risk Score</th>
+                <th>Risk Level</th>
+                <th>Biochemical & Yield Factors</th>
+                <th>Prior Treatments</th>
+                <th>Veterinary Directive</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in mastitis_records %}
+                <tr>
+                  <td>
+                    <a href="{{ url_for('animal.animal_detail', id=m.animal_id) }}" class="fw-bold text-primary text-decoration-none">
+                      {{ m.tag_number }}
+                    </a>
+                    {% if m.name and m.name != 'No Nickname' %}<span class="text-muted small">({{ m.name }})</span>{% endif %}
+                    <div class="small text-muted">{{ m.breed }} &bull; Yield: {{ m.current_yield }} L</div>
+                  </td>
+                  <td style="min-width: 170px;">
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="progress flex-grow-1" style="height: 10px;">
+                        <div class="progress-bar bg-{{ m.badge_class }}" style="width: {{ m.risk_score }}%;"></div>
+                      </div>
+                      <span class="fw-bold text-{{ m.badge_class }}">{{ m.risk_score }}%</span>
+                    </div>
+                    <div class="small text-muted mt-1">Fat: {{ m.current_fat }}% &bull; SNF: {{ m.current_snf }}%</div>
+                  </td>
+                  <td>
+                    <span class="badge bg-{{ m.badge_class }}-subtle text-{{ m.badge_class }} border border-{{ m.badge_class }} px-2 py-1">
+                      {{ m.risk_level }}
+                    </span>
+                  </td>
+                  <td style="max-width: 260px;">
+                    <ul class="list-unstyled mb-0 small">
+                      {% for factor in m.contributing_factors %}
+                        <li class="text-muted"><i class="fa-solid fa-angle-right text-{{ m.badge_class }} me-1"></i> {{ factor }}</li>
+                      {% endfor %}
+                    </ul>
+                  </td>
+                  <td>
+                    {% if m.active_treatments_count > 0 %}
+                      <span class="badge bg-danger-subtle text-danger border border-danger">
+                        <i class="fa-solid fa-syringe me-1"></i> {{ m.active_treatments_count }} logged ({{ m.mastitis_episodes_count }} mastitis)
+                      </span>
+                    {% else %}
+                      <span class="badge bg-light text-muted border">No recent treatments</span>
+                    {% endif %}
+                  </td>
+                  <td class="small">
+                    <div class="text-dark">{{ m.recommendation }}</div>
+                    {% if m.risk_score >= 40 and current_user.is_manager() %}
+                      <a href="{{ url_for('treatment.treatment_list', animal_id=m.animal_id) }}" class="btn btn-xs btn-outline-danger mt-1">
+                        <i class="fa-solid fa-notes-medical me-1"></i> Log Treatment
+                      </a>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-muted">No milking cattle available for mastitis screening.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- TAB 4: CULL AND KEEP RECOMMENDATION                              -->
+      <!-- ================================================================= -->
+      <div class="tab-pane fade" id="tab-cull" role="tabpanel">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 pb-3 border-bottom">
+          <div>
+            <h5 class="fw-bold mb-1">Cull and Keep Recommendation (K-Means Clustering)</h5>
+            <p class="text-muted small mb-0">
+              Clusters cows by milk yield, feed cost, health history, and age, then ranks them into <strong>High Profit, Average Profit, or Cull Candidates</strong>.
+            </p>
+          </div>
+          <div class="d-flex gap-2">
+            <span class="badge bg-success px-3 py-2">{{ cull_keep_data.high_count }} High Profit (Keep & Breed)</span>
+            <span class="badge bg-primary px-3 py-2">{{ cull_keep_data.avg_count }} Average Profit</span>
+            <span class="badge bg-danger px-3 py-2">{{ cull_keep_data.cull_count }} Cull Candidates</span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table custom-table align-middle">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Cattle Tag / Breed</th>
+                <th>Daily Yield (L)</th>
+                <th>Est. Daily Revenue</th>
+                <th>Est. Daily Feed Cost</th>
+                <th>Daily Margin</th>
+                <th>Health History</th>
+                <th>AI Composite Index</th>
+                <th>Decision & Rationale</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for cow in cull_keep_data.cows %}
+                <tr>
+                  <td class="fw-bold">#{{ loop.index }}</td>
+                  <td>
+                    <a href="{{ url_for('animal.animal_detail', id=cow.animal_id) }}" class="fw-bold text-primary text-decoration-none">
+                      {{ cow.tag_number }}
+                    </a>
+                    {% if cow.name and cow.name != 'No Nickname' %}<span class="text-muted small">({{ cow.name }})</span>{% endif %}
+                    <div class="small text-muted">{{ cow.breed }} &bull; {{ cow.age_years }} yrs</div>
+                  </td>
+                  <td class="fw-bold text-success">{{ cow.daily_avg_yield }} L</td>
+                  <td>₹{{ (cow.daily_avg_yield * 44.0)|round(1) }}</td>
+                  <td class="text-danger">₹{{ (cow.total_feed_cost / 14.0)|round(1) if cow.total_feed_cost else 120.0 }}</td>
+                  <td class="fw-bold {% if cow.daily_margin >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if cow.daily_margin >= 0 %}+{% endif %}₹{{ cow.daily_margin }} / day
+                  </td>
+                  <td>
+                    {% if cow.treatment_count > 0 %}
+                      <span class="badge bg-danger-subtle text-danger border border-danger">{{ cow.treatment_count }} treatments (₹{{ cow.health_cost }})</span>
+                    {% else %}
+                      <span class="badge bg-success-subtle text-success border border-success"><i class="fa-solid fa-check me-1"></i> Clean</span>
+                    {% endif %}
+                  </td>
+                  <td style="min-width: 140px;">
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="progress flex-grow-1" style="height: 8px;">
+                        <div class="progress-bar {% if cow.composite_score >= 65 %}bg-success{% elif cow.composite_score >= 40 %}bg-primary{% else %}bg-danger{% endif %}" style="width: {{ cow.composite_score }}%;"></div>
+                      </div>
+                      <span class="fw-bold small">{{ cow.composite_score }}/100</span>
+                    </div>
+                  </td>
+                  <td style="max-width: 250px;">
+                    <span class="badge bg-{{ cow.badge_class }}-subtle text-{{ cow.badge_class }} border border-{{ cow.badge_class }} px-2 py-1 mb-1">
+                      {{ cow.recommendation }}
+                    </span>
+                    <div class="small text-muted">{{ cow.rationale }}</div>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="9" class="text-center py-4 text-muted">No cattle available for ranking.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- TAB 5: FEED OPTIMIZATION & INVENTORY DEPLETION                    -->
+      <!-- ================================================================= -->
+      <div class="tab-pane fade" id="tab-feed" role="tabpanel">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 pb-3 border-bottom">
+          <div>
+            <h5 class="fw-bold mb-1">Feed Ration Optimization & Stockout Depletion Prediction</h5>
+            <p class="text-muted small mb-0">
+              Suggests daily ration per animal by weight and milk yield via <strong>Linear Programming (scipy.optimize.linprog)</strong> and predicts when stock will run out so you can reorder in time.
+            </p>
+          </div>
+          <div>
+            <a href="{{ url_for('feed.feed_list') }}" class="btn btn-outline-success btn-sm">
+              <i class="fa-solid fa-warehouse me-1"></i> Manage Feed Inventory
+            </a>
+          </div>
+        </div>
+
+        <!-- Section A: Least Cost Nutritional Ration -->
+        <div class="row g-4 mb-4">
+          <div class="col-lg-7">
+            <div class="content-card h-100">
+              <div class="content-card-header d-flex justify-content-between align-items-center">
+                <h6 class="content-card-title mb-0">
+                  <i class="fa-solid fa-utensils text-success me-1"></i>
+                  Scientific Daily Ration Suggestion (ICAR / NRC Standards)
+                </h6>
+                <span class="badge bg-success-subtle text-success border border-success">
+                  Optimized by Linear Programming
+                </span>
+              </div>
+              <div class="content-card-body">
+                <div class="p-3 bg-light rounded-3 mb-3">
+                  <div class="row g-2 text-center">
+                    <div class="col-3">
+                      <div class="text-muted small">Cattle Weight</div>
+                      <div class="fw-bold fs-6">{{ optimal_ration.body_weight_kg }} kg</div>
+                    </div>
+                    <div class="col-3">
+                      <div class="text-muted small">Milk Yield</div>
+                      <div class="fw-bold fs-6 text-primary">{{ optimal_ration.daily_yield_liters }} L/day</div>
+                    </div>
+                    <div class="col-3">
+                      <div class="text-muted small">Dry Matter (DM)</div>
+                      <div class="fw-bold fs-6">{{ optimal_ration.delivered_dm }} kg</div>
+                    </div>
+                    <div class="col-3">
+                      <div class="text-muted small">Daily Feed Cost</div>
+                      <div class="fw-bold fs-6 text-success">₹{{ optimal_ration.total_daily_cost }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="table custom-table table-sm align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>Feed Category</th>
+                        <th>Recommended Item</th>
+                        <th>Daily Quantity (kg)</th>
+                        <th>Unit Rate (₹/kg)</th>
+                        <th>Daily Cost (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for item in optimal_ration.ration_items %}
+                        <tr>
+                          <td class="fw-bold">{{ item.category }}</td>
+                          <td>{{ item.feed_name }}</td>
+                          <td class="fw-bold text-success">{{ item.quantity_kg }} kg</td>
+                          <td>₹{{ item.unit_cost }}</td>
+                          <td class="fw-bold">₹{{ item.cost }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                    <tfoot>
+                      <tr class="table-light fw-bold">
+                        <td colspan="2">Total Daily Ration:</td>
+                        <td class="text-success">{{ optimal_ration.total_fresh_kg }} kg / day</td>
+                        <td>Feed Cost / Liter:</td>
+                        <td class="text-primary">₹{{ optimal_ration.cost_per_liter }} / L</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section B: Interactive Ration Calculator -->
+          <div class="col-lg-5">
+            <div class="content-card h-100">
+              <div class="content-card-header">
+                <h6 class="content-card-title mb-0">
+                  <i class="fa-solid fa-sliders text-primary me-1"></i>
+                  Interactive Animal Ration Calculator
+                </h6>
+              </div>
+              <div class="content-card-body">
+                <form id="rationCalcForm" onsubmit="calculateCustomRation(event)">
+                  <div class="mb-3">
+                    <label class="form-label small fw-bold">Select Active Cattle</label>
+                    <select id="calcAnimalSelect" class="form-select form-select-sm" onchange="fillAnimalParams()">
+                      <option value="">-- Choose Cattle or Input Custom Params --</option>
+                      {% for cow in milking_cows %}
+                        <option value="{{ cow.id }}" data-weight="{{ cow.weight_kg or 450 }}" data-yield="{{ cow.today_milk or 12 }}">
+                          {{ cow.tag_number }} - {{ cow.name or cow.breed }} ({{ cow.weight_kg or 450 }}kg &bull; {{ cow.today_milk or 12 }}L)
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small fw-bold">Live Weight (kg)</label>
+                    <input type="number" id="calcWeight" class="form-control form-control-sm" value="480" step="10" required>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small fw-bold">Daily Milk Yield (Liters)</label>
+                    <input type="number" id="calcYield" class="form-control form-control-sm" value="14" step="0.5" required>
+                  </div>
+                  <button type="submit" class="btn btn-sm btn-primary w-100">
+                    <i class="fa-solid fa-calculator me-1"></i> Solve Optimal Daily Ration
+                  </button>
+                </form>
+
+                <div id="calcResults" class="mt-3 p-3 bg-light rounded-3 border" style="display: none;">
+                  <h6 class="fw-bold mb-2 text-success"><i class="fa-solid fa-check me-1"></i> LP Optimal Solution:</h6>
+                  <div id="calcItemsList" class="small"></div>
+                  <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top fw-bold">
+                    <span>Est. Daily Ration Cost:</span>
+                    <span id="calcTotalCost" class="text-success fs-6"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section C: Inventory Depletion & Stockout Predictions -->
+        <h6 class="fw-bold mb-2"><i class="fa-solid fa-clock text-danger me-1"></i> Inventory Stockout & Depletion Forecasting</h6>
+        <div class="row g-3">
+          {% for f in feed_depletion %}
+            <div class="col-xl-4 col-md-6">
+              <div class="p-3 rounded-3 border bg-white h-100 shadow-sm position-relative">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div>
+                    <span class="badge bg-light text-dark border mb-1">{{ f.category }}</span>
+                    <h6 class="fw-bold mb-0 text-dark">{{ f.feed_name }}</h6>
+                  </div>
+                  <span class="badge {% if f.reorder_urgency == 'CRITICAL' %}bg-danger{% elif f.reorder_urgency == 'URGENT' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                    {% if f.days_remaining <= 0 %}DEPLETED{% else %}{{ f.days_remaining }} Days Left{% endif %}
+                  </span>
+                </div>
+
+                <div class="row g-2 small mb-3">
+                  <div class="col-6">
+                    <div class="text-muted">Current Stock:</div>
+                    <div class="fw-bold fs-6">{{ f.current_stock }} {{ f.unit }}</div>
+                  </div>
+                  <div class="col-6">
+                    <div class="text-muted">Daily Burn Rate:</div>
+                    <div class="fw-bold fs-6 text-danger">{{ f.daily_burn_rate }} {{ f.unit }}/day</div>
+                  </div>
+                  <div class="col-12 mt-2 pt-2 border-top">
+                    <div class="text-muted">Predicted Runout Date:</div>
+                    <div class="fw-bold {% if f.needs_reorder %}text-danger{% else %}text-dark{% endif %}">
+                      <i class="fa-solid fa-calendar-xmark me-1"></i> {{ f.runout_date }} ({{ f.runout_day_name }})
+                    </div>
+                  </div>
+                </div>
+
+                {% if f.needs_reorder %}
+                  <div class="p-2 rounded bg-danger-subtle text-danger small mb-2">
+                    <i class="fa-solid fa-truck-ramp-box me-1"></i>
+                    <strong>Action:</strong> Reorder <strong>{{ f.recommended_reorder_qty }} {{ f.unit }}</strong> (est ₹{{ f.estimated_reorder_cost }}) from {{ f.supplier }}.
+                  </div>
+                {% else %}
+                  <div class="p-2 rounded bg-light text-muted small mb-2">
+                    <i class="fa-solid fa-circle-check text-success me-1"></i>
+                    Stock level healthy. Next reorder expected in {{ f.days_remaining - 5 }} days.
+                  </div>
+                {% endif %}
+
+                {% if current_user.is_manager() %}
+                  <a href="{{ url_for('feed.feed_list') }}" class="btn btn-xs btn-outline-primary w-100">
+                    <i class="fa-solid fa-plus me-1"></i> Restock {{ f.feed_name }}
+                  </a>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- TAB 6: FINANCIAL EXPENSE & PROFIT FORECASTING                     -->
+      <!-- ================================================================= -->
+      <div class="tab-pane fade" id="tab-financials" role="tabpanel">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 pb-3 border-bottom">
+          <div>
+            <h5 class="fw-bold mb-1">Expense & Profit Forecasting (Next Month)</h5>
+            <p class="text-muted small mb-0">
+              Predicts next month’s operational expenditures and net profit from the expense ledger using time-series trend modeling and seasonal autoregression.
+            </p>
+          </div>
+          <div>
+            <span class="badge bg-success-subtle text-success border border-success px-3 py-2">
+              Forecast Horizon: {{ financial_forecast.forecast_period }}
+            </span>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="p-3 rounded-3 bg-light border">
+              <div class="text-muted small">Projected Monthly Revenue</div>
+              <div class="h3 fw-bold text-success mb-1">₹{{ financial_forecast.total_projected_revenue }}</div>
+              <div class="small text-muted">Daily avg: ₹{{ financial_forecast.avg_daily_revenue }}</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 rounded-3 bg-light border">
+              <div class="text-muted small">Projected Operating Costs</div>
+              <div class="h3 fw-bold text-danger mb-1">₹{{ financial_forecast.total_projected_expenses }}</div>
+              <div class="small text-muted">Daily avg: ₹{{ financial_forecast.avg_daily_expense }}</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 rounded-3 bg-light border">
+              <div class="text-muted small">Projected Net Profit</div>
+              <div class="h3 fw-bold {% if financial_forecast.total_projected_net_profit >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">
+                {% if financial_forecast.total_projected_net_profit >= 0 %}+{% endif %}₹{{ financial_forecast.total_projected_net_profit }}
+              </div>
+              <div class="small text-muted">Expected operational surplus</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 rounded-3 bg-light border">
+              <div class="text-muted small">Projected Net Margin</div>
+              <div class="h3 fw-bold text-primary mb-1">{{ financial_forecast.profit_margin_pct }}%</div>
+              <div class="small text-muted">Profit margin on sales</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-lg-8">
+            <div class="content-card h-100">
+              <div class="content-card-header">
+                <h6 class="content-card-title mb-0"><i class="fa-solid fa-chart-line text-primary me-1"></i> 30-Day Financial Trajectory Projection</h6>
+              </div>
+              <div class="content-card-body">
+                <div style="height: 320px;">
+                  <canvas id="hubFinancialTrajectoryChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-4">
+            <div class="content-card h-100">
+              <div class="content-card-header">
+                <h6 class="content-card-title mb-0"><i class="fa-solid fa-chart-pie text-secondary me-1"></i> Projected Expense Breakdown</h6>
+              </div>
+              <div class="content-card-body d-flex flex-column justify-content-center">
+                <div style="height: 250px;">
+                  <canvas id="hubExpenseBreakdownChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function activateTab(tabId) {
+    const triggerEl = document.getElementById(tabId);
+    if (triggerEl) {
+      const tab = new bootstrap.Tab(triggerEl);
+      tab.show();
+    }
+  }
+
+  // 1. Milk Yield Forecast Chart on AI Hub
+  {% set active_f = cow_forecast if selected_cow_id and cow_forecast else herd_forecast %}
+  const ctxHubForecast = document.getElementById('hubForecastChart').getContext('2d');
+  
+  // Combine historical and forecast dates seamlessly
+  const histDates = {{ active_f.historical_dates | tojson }};
+  const histLiters = {{ active_f.historical_liters | tojson }};
+  const futureDates = {{ active_f.dates | tojson }};
+  const futureLiters = {{ active_f.forecast_liters | tojson }};
+  const lowerBand = {{ active_f.lower_bound | tojson }};
+  const upperBand = {{ active_f.upper_bound | tojson }};
+
+  const allTimelineDates = [...histDates, ...futureDates];
+  const histLineData = [...histLiters, ...Array(futureDates.length).fill(null)];
+  
+  const lastHistVal = histLiters.length > 0 ? histLiters[histLiters.length - 1] : 0;
+  const forecastLineData = [...Array(Math.max(0, histDates.length - 1)).fill(null), lastHistVal, ...futureLiters];
+  const upperLineData = [...Array(Math.max(0, histDates.length - 1)).fill(null), lastHistVal, ...upperBand];
+  const lowerLineData = [...Array(Math.max(0, histDates.length - 1)).fill(null), lastHistVal, ...lowerBand];
+
+  new Chart(ctxHubForecast, {
+    type: 'line',
+    data: {
+      labels: allTimelineDates,
+      datasets: [
+        {
+          label: 'Historical Actuals (L)',
+          data: histLineData,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          fill: false,
+          tension: 0.3,
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: '#2563eb'
+        },
+        {
+          label: 'AI Forecast (L)',
+          data: forecastLineData,
+          borderColor: '#06b6d4',
+          borderDash: [6, 4],
+          fill: false,
+          tension: 0.3,
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#06b6d4'
+        },
+        {
+          label: '95% Upper Confidence Band',
+          data: upperLineData,
+          borderColor: 'transparent',
+          backgroundColor: 'rgba(6, 182, 212, 0.12)',
+          fill: '+1',
+          tension: 0.3,
+          pointRadius: 0
+        },
+        {
+          label: '95% Lower Confidence Band',
+          data: lowerLineData,
+          borderColor: 'transparent',
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0.3,
+          pointRadius: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            filter: function(item) {
+              return !item.text.includes('Confidence Band');
+            }
+          }
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: function(context) {
+              if (context.parsed.y !== null && !context.dataset.label.includes('Lower')) {
+                return context.dataset.label + ': ' + context.parsed.y + ' L';
+              }
+              return null;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, title: { display: true, text: 'Milk Yield (Liters)' } }
+      }
+    }
+  });
+
+  // 2. Financial Trajectory Chart
+  const ctxHubFin = document.getElementById('hubFinancialTrajectoryChart').getContext('2d');
+  new Chart(ctxHubFin, {
+    type: 'line',
+    data: {
+      labels: {{ financial_forecast.dates | tojson }},
+      datasets: [
+        {
+          label: 'Projected Daily Revenue (₹)',
+          data: {{ financial_forecast.projected_revenue | tojson }},
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.08)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 2
+        },
+        {
+          label: 'Projected Daily Expenses (₹)',
+          data: {{ financial_forecast.projected_expenses | tojson }},
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.08)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 2
+        },
+        {
+          label: 'Projected Daily Net Profit (₹)',
+          data: {{ financial_forecast.projected_profit | tojson }},
+          borderColor: '#2563eb',
+          borderDash: [4, 4],
+          fill: false,
+          tension: 0.3,
+          borderWidth: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, title: { display: true, text: 'Amount (₹)' } }
+      }
+    }
+  });
+
+  // 3. Projected Expense Breakdown Donut
+  const ctxHubExp = document.getElementById('hubExpenseBreakdownChart').getContext('2d');
+  new Chart(ctxHubExp, {
+    type: 'doughnut',
+    data: {
+      labels: {{ financial_forecast.category_labels | tojson }},
+      datasets: [{
+        data: {{ financial_forecast.category_values | tojson }},
+        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' }
+      }
+    }
+  });
+
+  // 4. Interactive Ration Calculator Helper
+  function fillAnimalParams() {
+    const sel = document.getElementById('calcAnimalSelect');
+    const opt = sel.options[sel.selectedIndex];
+    if (opt.value) {
+      document.getElementById('calcWeight').value = opt.getAttribute('data-weight');
+      document.getElementById('calcYield').value = opt.getAttribute('data-yield');
+    }
+  }
+
+  function calculateCustomRation(e) {
+    e.preventDefault();
+    const animalId = document.getElementById('calcAnimalSelect').value;
+    const weight = document.getElementById('calcWeight').value;
+    const dailyYield = document.getElementById('calcYield').value;
+
+    fetch(`/api/ai/feed/ration?weight=${weight}&yield=${dailyYield}${animalId ? '&animal_id=' + animalId : ''}`)
+      .then(res => res.json())
+      .then(data => {
+        const listDiv = document.getElementById('calcItemsList');
+        listDiv.innerHTML = '';
+        data.ration_items.forEach(item => {
+          listDiv.innerHTML += `
+            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+              <span><strong>${item.category}:</strong> ${item.feed_name}</span>
+              <span><strong>${item.quantity_kg} kg</strong> (₹${item.cost})</span>
+            </div>
+          `;
+        });
+        document.getElementById('calcTotalCost').innerText = `₹${data.total_daily_cost} / day (₹${data.cost_per_liter}/L)`;
+        document.getElementById('calcResults').style.display = 'block';
+      })
+      .catch(err => {
+        alert('Error solving LP ration: ' + err);
+      });
+  }
+</script>
+{% endblock %}

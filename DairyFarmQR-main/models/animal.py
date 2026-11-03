@@ -23,6 +23,7 @@ class Animal(db.Model):
     # Relationships
     milk_records = db.relationship('MilkProduction', backref='animal', lazy='dynamic', cascade='all, delete-orphan')
     vaccinations = db.relationship('Vaccination', backref='animal', lazy='dynamic', cascade='all, delete-orphan')
+    treatments = db.relationship('MedicalTreatment', backref='animal', lazy='dynamic', cascade='all, delete-orphan')
 
     @property
     def display_name(self):

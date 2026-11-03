@@ -76,6 +76,21 @@ def dashboard():
     # Recent milk records
     recent_milk = MilkProduction.query.order_by(MilkProduction.date.desc(), MilkProduction.id.desc()).limit(7).all()
 
+    # AI Intelligence Insights for Dashboard
+    from services.ai_engine import DairyAIEngine
+    try:
+        anomalies = DairyAIEngine.detect_yield_anomalies(lookback_days=14)
+        feed_depletion = DairyAIEngine.forecast_feed_depletion()
+        urgent_feed_runouts = [f for f in feed_depletion if f['needs_reorder'] or f['days_remaining'] <= 7]
+        mastitis_alerts = [m for m in DairyAIEngine.predict_mastitis_risk() if m['risk_level'] == 'HIGH RISK']
+        milk_forecast_summary = DairyAIEngine.forecast_milk_yield(days=7)
+    except Exception as e:
+        print(f"[AI Engine Warning] {e}")
+        anomalies = []
+        urgent_feed_runouts = []
+        mastitis_alerts = []
+        milk_forecast_summary = None
+
     return render_template(
         'dashboard.html',
         total_animals=total_animals,
@@ -94,5 +109,9 @@ def dashboard():
         chart_evening_data=chart_evening_data,
         low_feed_items=low_feed_items,
         urgent_vaccines=urgent_vaccines,
-        recent_milk=recent_milk
+        recent_milk=recent_milk,
+        anomalies=anomalies,
+        urgent_feed_runouts=urgent_feed_runouts,
+        mastitis_alerts=mastitis_alerts,
+        milk_forecast_summary=milk_forecast_summary
     )

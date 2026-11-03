@@ -1,0 +1,319 @@
+{% extends "layout.html" %}
+
+{% block title %}Medical & Health Treatment Log - Smart Dairy{% endblock %}
+{% block page_title %}Cattle Health & Veterinary Treatments{% endblock %}
+
+{% block content %}
+<!-- Top Header & Actions -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Cattle Health & Veterinary Treatment Log</h4>
+    <p class="text-muted small mb-0">Record clinical mastitis, medical diagnoses, antibiotics, and milk withdrawal periods.</p>
+  </div>
+  <div class="d-flex gap-2">
+    {% if current_user.is_manager() %}
+    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#newTreatmentModal">
+      <i class="fa-solid fa-stethoscope me-1"></i> Log Medical Treatment
+    </button>
+    {% endif %}
+    <a href="{{ url_for('ai.ai_hub') }}#tab-mastitis" class="btn btn-outline-warning btn-sm">
+      <i class="fa-solid fa-shield-virus me-1"></i> Mastitis Risk Radar
+    </a>
+  </div>
+</div>
+
+<!-- Health Summary Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="stat-card" style="--card-accent: #ef4444;">
+      <div>
+        <div class="stat-label">Currently Under Treatment</div>
+        <div class="stat-value text-danger">{{ under_treatment_count }} <span class="fs-6 text-muted">Cattle</span></div>
+        <div class="small text-muted mt-1">Active veterinary observation</div>
+      </div>
+      <div class="stat-icon danger"><i class="fa-solid fa-notes-medical"></i></div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="stat-card" style="--card-accent: #f59e0b;">
+      <div>
+        <div class="stat-label">Active Milk Withholding (Withdrawal)</div>
+        <div class="stat-value text-warning">{{ active_withdrawal_count }} <span class="fs-6 text-muted">Cattle</span></div>
+        <div class="small text-muted mt-1">Milk must NOT be mixed into bulk tank</div>
+      </div>
+      <div class="stat-icon warning"><i class="fa-solid fa-bottle-droplet"></i></div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="stat-card" style="--card-accent: #10b981;">
+      <div>
+        <div class="stat-label">AI Mastitis Early Warnings</div>
+        <div class="stat-value text-success"><i class="fa-solid fa-brain me-1"></i> Active</div>
+        <div class="small text-muted mt-1">Automated screening on every milk log</div>
+      </div>
+      <div class="stat-icon success"><i class="fa-solid fa-shield-halved"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="content-card mb-4 no-print">
+  <div class="content-card-body p-3">
+    <form method="GET" action="{{ url_for('treatment.treatment_list') }}" class="row g-2 align-items-center">
+      <div class="col-md-4">
+        <label class="form-label small fw-bold mb-1">Filter by Animal</label>
+        <select name="animal_id" class="form-select form-select-sm">
+          <option value="">All Cattle</option>
+          {% for a in animals %}
+            <option value="{{ a.id }}" {% if selected_animal == a.id|string %}selected{% endif %}>
+              {{ a.tag_number }} - {{ a.name or a.breed }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small fw-bold mb-1">Filter by Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All Statuses</option>
+          <option value="Under Treatment" {% if selected_status == 'Under Treatment' %}selected{% endif %}>Under Treatment</option>
+          <option value="Recovered" {% if selected_status == 'Recovered' %}selected{% endif %}>Recovered</option>
+          <option value="Follow-up Needed" {% if selected_status == 'Follow-up Needed' %}selected{% endif %}>Follow-up Needed</option>
+        </select>
+      </div>
+      <div class="col-md-4 d-flex gap-2 align-items-end">
+        <button type="submit" class="btn btn-sm btn-primary flex-grow-1"><i class="fa-solid fa-filter me-1"></i> Filter</button>
+        <a href="{{ url_for('treatment.treatment_list') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Treatment Records Table -->
+<div class="content-card">
+  <div class="content-card-body p-0">
+    <div class="table-responsive">
+      <table class="table custom-table align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Cattle Tag / Breed</th>
+            <th>Clinical Diagnosis</th>
+            <th>Treatment Administered</th>
+            <th>Milk Withdrawal</th>
+            <th>Veterinarian</th>
+            <th>Status</th>
+            <th>Cost (₹)</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in treatments %}
+            <tr>
+              <td>
+                <div class="fw-bold">{{ t.administered_date.strftime('%d %b %Y') }}</div>
+              </td>
+              <td>
+                <a href="{{ url_for('animal.animal_detail', id=t.animal_id) }}" class="fw-bold text-primary text-decoration-none">
+                  {{ t.animal.tag_number }}
+                </a>
+                {% if t.animal.name %}<span class="text-muted small">({{ t.animal.name }})</span>{% endif %}
+                <div class="small text-muted">{{ t.animal.breed }}</div>
+              </td>
+              <td>
+                <span class="badge {% if 'mastitis' in t.diagnosis|lower %}bg-danger{% else %}bg-secondary{% endif %}">
+                  {{ t.diagnosis }}
+                </span>
+                {% if t.symptoms %}
+                  <div class="small text-muted text-truncate" style="max-width: 200px;" title="{{ t.symptoms }}">{{ t.symptoms }}</div>
+                {% endif %}
+              </td>
+              <td style="max-width: 220px;">
+                <div class="fw-semibold text-dark">{{ t.treatment_given }}</div>
+                {% if t.notes %}<div class="small text-muted">{{ t.notes }}</div>{% endif %}
+              </td>
+              <td>
+                {% if t.is_in_withdrawal %}
+                  <span class="badge bg-danger">
+                    <i class="fa-solid fa-ban me-1"></i> {{ t.withdrawal_days_remaining }}d Remaining
+                  </span>
+                  <div class="small text-danger fw-semibold mt-1">Do NOT sell milk</div>
+                {% else %}
+                  <span class="badge bg-success-subtle text-success border border-success">
+                    <i class="fa-solid fa-check me-1"></i> Cleared
+                  </span>
+                {% endif %}
+              </td>
+              <td>{{ t.veterinarian or 'Staff' }}</td>
+              <td>
+                {% if t.status == 'Under Treatment' %}
+                  <span class="badge bg-danger-subtle text-danger border border-danger">Under Treatment</span>
+                {% elif t.status == 'Recovered' %}
+                  <span class="badge bg-success-subtle text-success border border-success">Recovered</span>
+                {% else %}
+                  <span class="badge bg-warning-subtle text-warning border border-warning">{{ t.status }}</span>
+                {% endif %}
+              </td>
+              <td class="fw-bold">₹{{ t.cost }}</td>
+              <td class="text-end">
+                {% if current_user.is_manager() %}
+                  <div class="dropdown d-inline-block">
+                    <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                      Update
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                      <li>
+                        <form method="POST" action="{{ url_for('treatment.update_status', id=t.id) }}">
+                          <input type="hidden" name="status" value="Recovered">
+                          <button type="submit" class="dropdown-item text-success"><i class="fa-solid fa-circle-check me-2"></i> Mark as Recovered</button>
+                        </form>
+                      </li>
+                      <li>
+                        <form method="POST" action="{{ url_for('treatment.update_status', id=t.id) }}">
+                          <input type="hidden" name="status" value="Follow-up Needed">
+                          <button type="submit" class="dropdown-item text-warning"><i class="fa-solid fa-clock me-2"></i> Mark Follow-up Needed</button>
+                        </form>
+                      </li>
+                      <li>
+                        <form method="POST" action="{{ url_for('treatment.update_status', id=t.id) }}">
+                          <input type="hidden" name="status" value="Under Treatment">
+                          <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-stethoscope me-2"></i> Keep Under Treatment</button>
+                        </form>
+                      </li>
+                      {% if current_user.is_admin() %}
+                      <li><hr class="dropdown-divider"></li>
+                      <li>
+                        <form method="POST" action="{{ url_for('treatment.delete_treatment', id=t.id) }}" onsubmit="return confirm('Delete this treatment record?');">
+                          <button type="submit" class="dropdown-item text-danger"><i class="fa-solid fa-trash me-2"></i> Delete Record</button>
+                        </form>
+                      </li>
+                      {% endif %}
+                    </ul>
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="9" class="text-center py-4 text-muted">No medical treatments found matching criteria.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <div class="p-3 d-flex justify-content-between align-items-center border-top">
+      <small class="text-muted">Showing {{ treatments|length }} of {{ pagination.total }} treatment records</small>
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('treatment.treatment_list', page=pagination.prev_num, animal_id=selected_animal, status=selected_status) }}">Previous</a>
+          </li>
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+            {% if p %}
+              <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('treatment.treatment_list', page=p, animal_id=selected_animal, status=selected_status) }}">{{ p }}</a>
+              </li>
+            {% else %}
+              <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+            {% endif %}
+          {% endfor %}
+          <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('treatment.treatment_list', page=pagination.next_num, animal_id=selected_animal, status=selected_status) }}">Next</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal: Log Medical Treatment -->
+{% if current_user.is_manager() %}
+<div class="modal fade" id="newTreatmentModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('treatment.add_treatment') }}">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title fw-bold"><i class="fa-solid fa-notes-medical me-2"></i> Log Medical Treatment</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Select Cattle <span class="text-danger">*</span></label>
+            <select name="animal_id" class="form-select form-select-sm" required>
+              <option value="">-- Choose Cattle --</option>
+              {% for a in animals %}
+                <option value="{{ a.id }}" {% if selected_animal == a.id|string %}selected{% endif %}>
+                  {{ a.tag_number }} - {{ a.name or a.breed }} ({{ a.health_status }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Diagnosis <span class="text-danger">*</span></label>
+              <select name="diagnosis" class="form-select form-select-sm" required>
+                <option value="Clinical Mastitis">Clinical Mastitis (Udder swelling/flakes)</option>
+                <option value="Subclinical Mastitis">Subclinical Mastitis (High SCC/Yield drop)</option>
+                <option value="Milk Fever (Hypocalcemia)">Milk Fever (Hypocalcemia)</option>
+                <option value="Ketosis">Ketosis (Energy deficiency)</option>
+                <option value="Foot Rot / Lameness">Foot Rot / Lameness</option>
+                <option value="Bloat (Tympanites)">Bloat (Tympanites)</option>
+                <option value="Bovine Ephemeral Fever">Bovine Ephemeral Fever</option>
+                <option value="General Veterinary Checkup">General Veterinary Checkup</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Treatment Date</label>
+              <input type="date" name="administered_date" class="form-control form-control-sm" value="{{ today }}" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Observed Symptoms</label>
+            <textarea name="symptoms" class="form-control form-control-sm" rows="2" placeholder="e.g. 35% sudden milk drop, left front quarter warm and swollen, abnormal milk flakes..."></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Treatment / Medication Given <span class="text-danger">*</span></label>
+            <input type="text" name="treatment_given" class="form-control form-control-sm" placeholder="e.g. Intramammary Ceftiofur tube + Meloxicam 15ml IM" required>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Milk Withdrawal Period (Days)</label>
+              <input type="number" name="withdrawal_period_days" class="form-control form-control-sm" value="3" min="0" max="30" required>
+              <div class="form-text small">Days milk cannot enter human food supply.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Treatment / Medicine Cost (₹)</label>
+              <input type="number" step="0.5" name="cost" class="form-control form-control-sm" value="350">
+            </div>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Attending Veterinarian</label>
+              <input type="text" name="veterinarian" class="form-control form-control-sm" placeholder="Dr. Alok Verma">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Follow-up Notes</label>
+              <input type="text" name="notes" class="form-control form-control-sm" placeholder="Check quarter in 24 hours">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-danger"><i class="fa-solid fa-floppy-disk me-1"></i> Save Treatment Log</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

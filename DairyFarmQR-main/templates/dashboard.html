@@ -8,22 +8,73 @@
 <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4">
   <div>
     <h4 class="fw-bold mb-1">Welcome back, {{ current_user.full_name }}! 👋</h4>
-    <p class="text-muted small mb-0">Here is your daily farm summary and production statistics.</p>
+    <p class="text-muted small mb-0">Here is your daily farm summary, ML forecasting, and production statistics.</p>
   </div>
   <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('ai.ai_hub') }}" class="btn btn-outline-primary">
+      <i class="fa-solid fa-brain me-1 text-warning"></i> AI Intelligence Hub
+    </a>
     <a href="{{ url_for('milk.milk_list') }}" class="btn btn-custom-primary">
       <i class="fa-solid fa-plus me-1"></i> Log Milk Entry
     </a>
-    <a href="{{ url_for('milk.quick_entry') }}" class="btn btn-outline-primary">
-      <i class="fa-solid fa-bolt me-1"></i> Quick Batch Entry
+    <a href="{{ url_for('milk.quick_entry') }}" class="btn btn-outline-secondary">
+      <i class="fa-solid fa-bolt me-1"></i> Quick Batch
     </a>
-    {% if current_user.is_manager() %}
-    <a href="{{ url_for('animal.add_animal') }}" class="btn btn-outline-secondary">
-      <i class="fa-solid fa-cow me-1"></i> Add Cattle
-    </a>
-    {% endif %}
   </div>
 </div>
+
+<!-- AI Early Illness Warning Alert Banner -->
+{% if anomalies %}
+  <div class="alert alert-danger shadow-sm border-danger border-2 rounded-3 mb-4 p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="bg-danger text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1.25rem;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-danger">Early Illness Warning</span>
+          <span class="fw-bold text-danger">{{ anomalies[0].alert_text }}</span>
+        </div>
+        <div class="small text-dark mt-1">
+          Recent yield: <strong>{{ anomalies[0].latest_yield }} L</strong> (7-day normal baseline: <strong>{{ anomalies[0].avg_7day }} L</strong> &bull; Drop: <strong class="text-danger">-{{ anomalies[0].drop_percentage }}%</strong>).
+          Possible early mastitis, ketosis, or acute infection.
+        </div>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('animal.animal_detail', id=anomalies[0].animal_id) }}" class="btn btn-sm btn-outline-danger bg-white">
+        <i class="fa-solid fa-id-card me-1"></i> Check {{ anomalies[0].tag_number }}
+      </a>
+      <a href="{{ url_for('ai.ai_hub') }}#tab-anomalies" class="btn btn-sm btn-danger">
+        <i class="fa-solid fa-stethoscope me-1"></i> View All Flagged ({{ anomalies|length }})
+      </a>
+    </div>
+  </div>
+{% endif %}
+
+<!-- AI Feed Stockout Warning (if any feed nearing depletion) -->
+{% if urgent_feed_runouts %}
+  <div class="alert alert-warning shadow-sm border-warning border-1 rounded-3 mb-4 p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="bg-warning text-dark rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 1.1rem;">
+        <i class="fa-solid fa-wheat-awn"></i>
+      </div>
+      <div>
+        <div class="fw-bold text-dark mb-0">Feed Stockout Warning: {{ urgent_feed_runouts[0].feed_name }}</div>
+        <div class="small text-muted">
+          Only <strong>{{ urgent_feed_runouts[0].current_stock }} {{ urgent_feed_runouts[0].unit }}</strong> remaining (burn rate: {{ urgent_feed_runouts[0].daily_burn_rate }} {{ urgent_feed_runouts[0].unit }}/day).
+          Predicted stockout: <strong class="text-danger">{{ urgent_feed_runouts[0].runout_date }}</strong> ({{ urgent_feed_runouts[0].days_remaining }} days left).
+        </div>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('feed.feed_list') }}" class="btn btn-sm btn-warning text-dark fw-semibold">
+        <i class="fa-solid fa-truck-ramp-box me-1"></i> Reorder Now
+      </a>
+    </div>
+  </div>
+{% endif %}
+
 
 <!-- KPI Stat Cards -->
 <div class="row g-3 mb-4">

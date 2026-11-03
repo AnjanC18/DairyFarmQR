@@ -89,7 +89,47 @@
   </div>
 </div>
 
-<!-- Charts Row -->
+<!-- AI Milk Yield Forecast Row -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="content-card">
+      <div class="content-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+          <h5 class="content-card-title mb-0">
+            <i class="fa-solid fa-wand-magic-sparkles text-primary me-2"></i>
+            Herd Milk Yield Forecasting (Next 14 Days)
+          </h5>
+          <small class="text-muted">Machine Learning Forecast: Random Forest & Gradient Boosting based on past lactation curves & weather persistence</small>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-2">
+            <i class="fa-solid fa-calculator me-1"></i> 14-Day Projected Herd Yield: <strong>{{ milk_forecast.total_forecast_liters }} L</strong> (Avg {{ milk_forecast.avg_daily_forecast }} L/day)
+          </span>
+          <a href="{{ url_for('ai.ai_hub') }}" class="btn btn-sm btn-outline-primary">
+            <i class="fa-solid fa-brain me-1"></i> Open AI Intelligence Hub
+          </a>
+        </div>
+      </div>
+      <div class="content-card-body">
+        <div style="height: 340px;">
+          <canvas id="milkForecastChart"></canvas>
+        </div>
+        <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top small text-muted">
+          <div>
+            <span class="badge bg-primary me-1">&bull; Solid Blue Line</span> Actual Recorded Milk
+            <span class="badge bg-info text-dark ms-3 me-1">-- Dashed Cyan Line</span> AI Machine Learning Forecast (Next 14 Days)
+            <span class="badge bg-light text-muted border ms-3 me-1">Light Shaded Area</span> 95% Confidence Interval
+          </div>
+          <div class="text-end">
+            Projected herd revenue @ avg ₹42/L: <strong>₹{{ (milk_forecast.total_forecast_liters * 42.0)|round(2) }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row: Revenue vs Expense Trend & Expense Breakdown -->
 <div class="row g-4 mb-4">
   <!-- Revenue vs Expense Trend -->
   <div class="col-xl-8">
@@ -120,7 +160,150 @@
   </div>
 </div>
 
-<!-- Top Yielding Cattle Leaderboard -->
+<!-- AI Expense and Profit Forecasting (Next Month) -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="content-card">
+      <div class="content-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+          <h5 class="content-card-title mb-0">
+            <i class="fa-solid fa-coins text-success me-2"></i>
+            Next Month Expense & Profit Forecasting (30-Day Financial Horizon)
+          </h5>
+          <small class="text-muted">Predicts next month’s costs and net profit from the operational expense ledger & milk production trajectory</small>
+        </div>
+        <div>
+          <span class="badge bg-success-subtle text-success border border-success px-3 py-2">
+            Horizon: {{ financial_forecast.forecast_period }}
+          </span>
+        </div>
+      </div>
+      <div class="content-card-body">
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="p-3 rounded-3 bg-light border">
+              <div class="text-muted small">Projected Monthly Revenue</div>
+              <div class="h4 fw-bold text-success mb-1">₹{{ financial_forecast.total_projected_revenue }}</div>
+              <div class="small text-muted">Avg ₹{{ financial_forecast.avg_daily_revenue }}/day</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 rounded-3 bg-light border">
+              <div class="text-muted small">Projected Operating Costs</div>
+              <div class="h4 fw-bold text-danger mb-1">₹{{ financial_forecast.total_projected_expenses }}</div>
+              <div class="small text-muted">Avg ₹{{ financial_forecast.avg_daily_expense }}/day</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 rounded-3 bg-light border">
+              <div class="text-muted small">Forecasted Net Profit</div>
+              <div class="h4 fw-bold {% if financial_forecast.total_projected_net_profit >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">
+                {% if financial_forecast.total_projected_net_profit >= 0 %}+{% endif %}₹{{ financial_forecast.total_projected_net_profit }}
+              </div>
+              <div class="small text-muted">Net Operating Surplus</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 rounded-3 bg-light border">
+              <div class="text-muted small">Projected Net Margin</div>
+              <div class="h4 fw-bold text-primary mb-1">{{ financial_forecast.profit_margin_pct }}%</div>
+              <div class="small text-muted">Profit-to-Sales Ratio</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="height: 300px;">
+          <canvas id="financialForecastChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cull and Keep Recommendation Leaderboard -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="content-card">
+      <div class="content-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+          <h5 class="content-card-title mb-0">
+            <i class="fa-solid fa-layer-group text-warning me-2"></i>
+            Cull & Keep Recommendation (K-Means Clustering & Economic Score)
+          </h5>
+          <small class="text-muted">Clusters cows by milk yield, feed cost, health history, and age, then ranks them as high, average, or low profit</small>
+        </div>
+        <div class="d-flex gap-2">
+          <span class="badge bg-success">{{ cull_keep_data.high_count }} High Profit</span>
+          <span class="badge bg-primary">{{ cull_keep_data.avg_count }} Average</span>
+          <span class="badge bg-danger">{{ cull_keep_data.cull_count }} Cull Candidates</span>
+        </div>
+      </div>
+      <div class="content-card-body p-0">
+        <div class="table-responsive">
+          <table class="table custom-table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Cattle Tag / Breed</th>
+                <th>Daily Yield (L)</th>
+                <th>Est. Daily Margin</th>
+                <th>Health History</th>
+                <th>AI Composite Index</th>
+                <th>Recommendation</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for cow in cull_keep_data.cows %}
+                <tr>
+                  <td class="fw-bold">#{{ loop.index }}</td>
+                  <td>
+                    <a href="{{ url_for('animal.animal_detail', id=cow.animal_id) }}" class="fw-bold text-primary text-decoration-none">
+                      {{ cow.tag_number }}
+                    </a>
+                    {% if cow.name and cow.name != 'No Nickname' %}
+                      <span class="text-muted small">({{ cow.name }})</span>
+                    {% endif %}
+                    <div class="small text-muted">{{ cow.breed }} &bull; {{ cow.age_years }} yrs</div>
+                  </td>
+                  <td class="fw-bold text-success">{{ cow.daily_avg_yield }} L/day</td>
+                  <td class="fw-bold {% if cow.daily_margin >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if cow.daily_margin >= 0 %}+{% endif %}₹{{ cow.daily_margin }} / day
+                  </td>
+                  <td>
+                    {% if cow.treatment_count == 0 %}
+                      <span class="badge bg-light text-success border"><i class="fa-solid fa-check me-1"></i> Clean Record</span>
+                    {% else %}
+                      <span class="badge bg-light text-danger border"><i class="fa-solid fa-syringe me-1"></i> {{ cow.treatment_count }} treatments</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="progress flex-grow-1" style="height: 6px;">
+                        <div class="progress-bar {% if cow.composite_score >= 65 %}bg-success{% elif cow.composite_score >= 40 %}bg-primary{% else %}bg-danger{% endif %}" style="width: {{ cow.composite_score }}%;"></div>
+                      </div>
+                      <span class="fw-bold small">{{ cow.composite_score }}/100</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-{{ cow.badge_class }}-subtle text-{{ cow.badge_class }} border border-{{ cow.badge_class }} px-2 py-1">
+                      {{ cow.recommendation }}
+                    </span>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="7" class="text-center py-4 text-muted">No cattle records available for clustering.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Top Yielding Cattle Leaderboard & Performance -->
 <div class="row g-4">
   <div class="col-xl-6">
     <div class="content-card h-100">
@@ -192,7 +375,89 @@
 
 {% block extra_scripts %}
 <script>
-  // Financial Revenue vs Expense Line Chart
+  // 1. AI Milk Yield 14-Day Forecast Line Chart
+  const ctxForecast = document.getElementById('milkForecastChart').getContext('2d');
+  new Chart(ctxForecast, {
+    type: 'line',
+    data: {
+      labels: {{ combined_dates | tojson }},
+      datasets: [
+        {
+          label: 'Historical Actual Yield (L)',
+          data: {{ actual_milk_combined | tojson }},
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          fill: false,
+          tension: 0.3,
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: '#2563eb'
+        },
+        {
+          label: 'AI 14-Day Forecast (L)',
+          data: {{ forecast_milk_combined | tojson }},
+          borderColor: '#06b6d4',
+          backgroundColor: 'rgba(6, 182, 212, 0.05)',
+          borderDash: [6, 4],
+          fill: false,
+          tension: 0.3,
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#06b6d4'
+        },
+        {
+          label: '95% Upper Confidence Band',
+          data: {{ forecast_upper_combined | tojson }},
+          borderColor: 'transparent',
+          backgroundColor: 'rgba(6, 182, 212, 0.12)',
+          fill: '+1',
+          tension: 0.3,
+          pointRadius: 0
+        },
+        {
+          label: '95% Lower Confidence Band',
+          data: {{ forecast_lower_combined | tojson }},
+          borderColor: 'transparent',
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0.3,
+          pointRadius: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            filter: function(item) {
+              return !item.text.includes('Confidence Band');
+            }
+          }
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: function(context) {
+              if (context.parsed.y !== null && !context.dataset.label.includes('Lower')) {
+                return context.dataset.label + ': ' + context.parsed.y + ' L';
+              }
+              return null;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, title: { display: true, text: 'Milk Yield (Liters)' } }
+      }
+    }
+  });
+
+  // 2. Financial Revenue vs Expense Line Chart
   const ctxFin = document.getElementById('financialTrendChart').getContext('2d');
   new Chart(ctxFin, {
     type: 'line',
@@ -233,7 +498,60 @@
     }
   });
 
-  // Expense Category Donut
+  // 3. AI Financial Next Month Forecast Chart
+  const ctxFinForecast = document.getElementById('financialForecastChart').getContext('2d');
+  new Chart(ctxFinForecast, {
+    type: 'line',
+    data: {
+      labels: {{ financial_forecast.dates | tojson }},
+      datasets: [
+        {
+          label: 'Projected Revenue (₹)',
+          data: {{ financial_forecast.projected_revenue | tojson }},
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.08)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 2,
+          pointRadius: 2
+        },
+        {
+          label: 'Projected Expenses (₹)',
+          data: {{ financial_forecast.projected_expenses | tojson }},
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.08)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 2,
+          pointRadius: 2
+        },
+        {
+          label: 'Projected Net Margin (₹)',
+          data: {{ financial_forecast.projected_profit | tojson }},
+          borderColor: '#2563eb',
+          borderDash: [4, 4],
+          fill: false,
+          tension: 0.3,
+          borderWidth: 2,
+          pointRadius: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, title: { display: true, text: 'Projected Amount (₹)' } }
+      }
+    }
+  });
+
+  // 4. Expense Category Donut
   const ctxExp = document.getElementById('expensePieChart').getContext('2d');
   new Chart(ctxExp, {
     type: 'doughnut',
@@ -255,7 +573,7 @@
     }
   });
 
-  // Top Producers Bar Chart
+  // 5. Top Producers Bar Chart
   const ctxTop = document.getElementById('topProducersChart').getContext('2d');
   new Chart(ctxTop, {
     type: 'bar',

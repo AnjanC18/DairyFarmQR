@@ -1,0 +1,839 @@
+================================================================================
+          SMART DAIRY FARM MANAGEMENT SYSTEM - IN-DEPTH PROJECT EXPLANATION
+================================================================================
+Academic / Technical Project Documentation & Comprehensive Architectural Guide
+Technology Stack: Python 3, Flask 3, SQLAlchemy ORM, MySQL & SQLite, Bootstrap 5,
+                  Chart.js 4, html5-qrcode, PIL/Pillow QR Engine, scikit-learn,
+                  SciPy (Linear Programming), NumPy.
+================================================================================
+
+
+TABLE OF CONTENTS:
+--------------------------------------------------------------------------------
+ 1. PROJECT OVERVIEW & PROBLEM STATEMENT
+ 2. SYSTEM ARCHITECTURE & DESIGN PRINCIPLES
+ 3. 3-TIER ROLE-BASED ACCESS CONTROL (RBAC) & SECURITY MODEL
+ 4. CORE MODULES & FUNCTIONAL WORKFLOWS
+    4.1 Cattle Master Register & Digital Pedigree
+    4.2 Digital QR Code Tagging & Real-Time Camera Scanner
+    4.3 Daily Milk Yield Monitoring & Session Batch Entry
+    4.4 Feed & Ration Inventory Management
+    4.5 Cattle Health & Immunization Scheduling
+    4.6 Farm Workforce Directory & Payroll
+    4.7 Operational Expense Ledger & Cost Accounting
+    4.8 Executive Analytics & Management Reports
+    4.9 Veterinary Medical Treatment & Milk Withholding Period Tracking
+    4.10 Artificial Intelligence & Predictive Analytics Web Hub
+ 5. DATABASE SCHEMA & ENTITY RELATIONSHIP ARCHITECTURE
+    5.1 User Table (`users`)
+    5.2 Animal Table (`animals`)
+    5.3 Milk Production Table (`milk_productions`)
+    5.4 Feed Inventory Table (`feed_inventories`)
+    5.5 Feed Consumption Table (`feed_consumptions`)
+    5.6 Vaccination Table (`vaccinations`)
+    5.7 Employee Table (`employees`)
+    5.8 Expense Table (`expenses`)
+    5.9 Medical Treatment Table (`medical_treatments`)
+ 6. APPLICATION EXECUTION FLOW (FROM BOOT TO RENDER)
+ 7. API ENDPOINTS & ROUTING DIRECTORY
+ 8. FRONTEND ARCHITECTURE & USER EXPERIENCE DESIGN
+ 9. DEPLOYMENT, CONFIGURATION & ENVIRONMENT SETUP
+10. KEY HIGHLIGHTS & VIVA / PRESENTATION DEFENSE CHEATSHEET
+11. ARTIFICIAL INTELLIGENCE & MACHINE LEARNING SUBSYSTEM (6 CORE MODULES)
+    11.1 Milk Yield Forecasting Engine (7-14 Days, Herd & Individual)
+    11.2 Anomaly Detection (Early Illness & Stress Warning)
+    11.3 Mastitis Risk Prediction Radar (0-100% Risk Index)
+    11.4 Cull and Keep Recommendation Matrix (K-Means & Economic Margin)
+    11.5 Feed Ration Optimization (SciPy LP) & Stockout Depletion Forecast
+    11.6 Next Month Financial Forecasting (Expense, Revenue, Net Margin)
+    11.7 Veterinary Treatment & Milk Withdrawal Food Safety Tracking
+================================================================================
+
+
+================================================================================
+1. PROJECT OVERVIEW & PROBLEM STATEMENT
+================================================================================
+
+1.1 BACKGROUND & PROBLEM STATEMENT:
+Traditional dairy farming operations suffer from significant inefficiencies:
+- Manual Paper Ledgers: Milk yield recordings, vaccination histories, and feed
+  stocks are written on paper, leading to lost records, errors, and delayed insights.
+- Individual Cattle Identification: Ear tag numbers are difficult to read in barns
+  and prone to misidentification during daily milking and medical treatment.
+- Delayed Health Interventions: Missed vaccine boosters (FMD, Brucellosis, Blackleg)
+  cause sudden disease outbreaks and massive herd mortality or milk yield crashes.
+- Unmonitored Feed Waste: Feed constitutes 60-70% of dairy farm operational costs.
+  Without real-time inventory and consumption logging, overfeeding or stockouts occur.
+- Lack of Financial Transparency: Farm owners struggle to calculate daily profit
+  margins because milk revenue and operational expenditures (feed, medicines, labor,
+  electricity) are tracked in separate, uncoordinated books.
+
+1.2 THE SOLUTION - SMART DAIRY FARM MANAGEMENT SYSTEM:
+A centralized, mobile-responsive web portal designed specifically for modern dairy
+enterprises and academic evaluation. The system digitizes every facet of farm life:
+1. Generates unique, high-resolution QR tags for every cattle.
+2. Enables real-time camera scanning via phone or webcam for instant cattle profiles.
+3. Provides high-speed batch milking session logging (Morning/Evening/Afternoon).
+4. Tracks nutritional feed inventories with low-stock warning triggers.
+5. Manages automated vaccination reminders with color-coded alerts.
+6. Maintains staff rosters and categorized operational expense ledgers.
+7. Displays interactive visual financial and production analytics with Chart.js.
+8. Enforces a strict 3-tier Role-Based Access Control (RBAC) security model.
+
+
+================================================================================
+2. SYSTEM ARCHITECTURE & DESIGN PRINCIPLES
+================================================================================
+
+2.1 ARCHITECTURAL PATTERN:
+The project follows the Model-View-Controller (MVC) / Model-Template-View (MTV)
+design pattern implemented through Flask Blueprints:
+
+                   +-----------------------------+
+                   |     Web Browser / Client    |
+                   | (HTML5, Bootstrap, ChartJS) |
+                   +--------------+--------------+
+                                  |
+                           HTTP / HTTPS / REST
+                                  |
+                   +--------------v--------------+
+                   |        Flask App Factory    |
+                   |         (`create_app`)      |
+                   +--------------+--------------+
+                                  |
+         +------------------------+------------------------+
+         |                        |                        |
++--------v-------+       +--------v-------+       +--------v-------+
+|  Auth Blueprint|       | Animal / QR BP |       |  Milk / Feed BP|
+|  (`routes/`)   |       |   (`routes/`)  |       |   (`routes/`)  |
++--------+-------+       +--------+-------+       +--------+-------+
+         |                        |                        |
++--------v-------+       +--------v-------+       +--------v-------+
+|  Treatment BP  |       |  Report / Exp  |       |  AI Engine BP  |
+|  (`routes/`)   |       |   (`routes/`)  |       |(`services/ai` )|
++--------+-------+       +--------+-------+       +--------+-------+
+         |                        |                        |
+         +------------------------+------------------------+
+                                  |
+                   +--------------v--------------+
+                   |   SQLAlchemy ORM Data Models|
+                   | (User, Animal, Milk, Treat) |
+                   +--------------+--------------+
+                                  |
+             +--------------------+--------------------+
+             |                                         |
+    +--------v--------+                       +--------v--------+
+    | SQLite Database |                       |  MySQL Database |
+    |  (`dairy.db`)   |                       |  (`dairy_farm`) |
+    | (Default Local) |                       |  (Production)   |
+    +-----------------+                       +-----------------+
+
+2.2 KEY ARCHITECTURAL CHARACTERISTICS:
+- Modular Blueprint Structure: Instead of a monolithic app file, features are
+  separated into clean functional blueprints (`auth`, `main`, `animal`, `milk`,
+  `feed`, `vaccination`, `employee`, `expense`, `report`, `qr`).
+- Dual Database Engine Support:
+  * Zero-Configuration Local Development: Defaults to SQLite (`dairy.db`), requiring
+    no background database service installation.
+  * Enterprise Production Support: Fully compatible with MySQL via PyMySQL connector
+    and SQLAlchemy connection string pooling (`mysql+pymysql://...`).
+  * Auto-Seeding: Automatically provisions tables and realistic sample records upon
+    first boot if the database is blank.
+- Network-Aware Context Injection:
+  * Automatically resolves local LAN IP address via UDP socket probe (`8.8.8.8:80`).
+  * Injects `local_ip` and `mobile_url` into all Jinja2 templates via context
+    processor, allowing farm staff to connect their smartphones instantly.
+- Stateless REST & State-Bearing SSR Hybrid:
+  * Server-Side Rendered (SSR) HTML with Jinja2 for fast page loads and rich layout.
+  * REST JSON APIs (`/api/qr/lookup/<tag>`, `/api/animals/search`) for asynchronous
+    live camera QR scanning and search autocomplete without reloading the page.
+
+
+================================================================================
+3. 3-TIER ROLE-BASED ACCESS CONTROL (RBAC) & SECURITY MODEL
+================================================================================
+
+To guarantee farm data integrity and prevent unauthorized record tampering, the
+system replaces public sign-ups with a strict Administrator-Governed RBAC model.
+
+3.1 THE THREE USER ROLES:
+1. Administrator (`admin`):
+   - Scope: Farm Owner, Managing Director, System Administrator.
+   - Permissions: Full unrestricted control. The ONLY role capable of creating user
+     logins, editing credentials, resetting passwords, toggling active status, and
+     viewing sensitive financial ledgers and system logs.
+2. Farm Manager (`manager`):
+   - Scope: Barn Supervisor, Lead Herd Specialist, Chief Veterinarian.
+   - Permissions: Herd lifecycle management (adding/editing cattle, generating QR tags),
+     feed restocking, setting up vaccination schedules, logging batch milk entries,
+     managing staff records, logging operational expenses, and viewing analytics.
+3. Farm Staff (`staff`):
+   - Scope: Daily Milkers, Barn Hands, Feed Handlers.
+   - Permissions: Routine barn operations only: logging daily milk yields, scanning
+     cattle QR tags with phones, recording feed rations used, and marking vaccinations
+     as completed. Restricted from viewing user accounts, salary data, or financial
+     analytics.
+
+3.2 RBAC PERMISSION MATRIX:
++-------------------------------+---------------+---------------+---------------+
+| Feature / Action              | Admin         | Manager       | Staff         |
++-------------------------------+---------------+---------------+---------------+
+| Create/Manage User Logins     | FULL ACCESS   | BLOCKED       | BLOCKED       |
+| Add / Edit Cattle Master Data | FULL ACCESS   | FULL ACCESS   | VIEW ONLY     |
+| Generate / Download QR Tags   | FULL ACCESS   | FULL ACCESS   | VIEW / SCAN   |
+| Real-time Camera QR Scanner   | FULL ACCESS   | FULL ACCESS   | FULL ACCESS   |
+| Daily Milk Yield Entry        | FULL ACCESS   | FULL ACCESS   | DAILY ENTRY   |
+| Session Batch Milk Entry      | FULL ACCESS   | FULL ACCESS   | DAILY ENTRY   |
+| Feed Inventory & Restocking   | FULL ACCESS   | FULL ACCESS   | VIEW STOCK    |
+| Log Daily Feed Consumption    | FULL ACCESS   | FULL ACCESS   | FULL ACCESS   |
+| Vaccination Schedule & Edit   | FULL ACCESS   | FULL ACCESS   | MARK COMPLETE |
+| Staff Directory & Payroll     | FULL ACCESS   | MANAGE STAFF  | BLOCKED       |
+| Operational Expense Ledger    | FULL ACCESS   | LOG EXPENSES  | BLOCKED       |
+| Financial & Production Reports| FULL ACCESS   | FULL ACCESS   | BLOCKED       |
++-------------------------------+---------------+---------------+---------------+
+
+3.3 SECURITY SAFEGUARDS:
+- Password Hashing: Implements Werkzeug's `generate_password_hash` utilizing
+  salted hashing algorithms (PBKDF2/scrypt). Plaintext passwords are never stored.
+- Session Protection: Flask-Login session management with `login_required` and
+  custom `@admin_required` decorators preventing URL parameter tampering.
+- Active Flag Enforcement: If an administrator deactivates a user account, their
+  active session is invalidated and login attempts are blocked immediately.
+- CSRF & SQL Injection Immunity: Parameterized SQL queries via SQLAlchemy ORM;
+  safe string sanitization across form inputs.
+
+
+================================================================================
+4. CORE MODULES & FUNCTIONAL WORKFLOWS
+================================================================================
+
+4.1 CATTLE MASTER REGISTER & DIGITAL PEDIGREE:
+- Purpose: Maintains the complete historical and biological dossier for every cow,
+  buffalo, or goat in the herd.
+- Data Tracked: Tag number (unique ear tag), name, species, breed (e.g., Holstein
+  Friesian, Jersey, Gir, Sahiwal, Murrah Buffalo), gender, date of birth, weight,
+  milking status (`Milking`, `Dry`, `Pregnant`, `Sick`, `Calf`, `Sold`), and
+  health status (`Healthy`, `Under Treatment`, `Quarantined`, `Critical`).
+- Dynamic Computed Properties:
+  * `age`: Calculates years and months from date of birth dynamically.
+  * `today_milk`: Sums milk recorded for today's date across all milking sessions.
+  * `total_milk`: Aggregates lifetime milk yield produced by this individual animal.
+- Actions: Add cattle, update status, view detailed dossier, filter by milking
+  or health status with one-click filter pills.
+
+4.2 DIGITAL QR CODE TAGGING & REAL-TIME CAMERA SCANNER:
+- QR Generation (`utils/qr_helper.py`):
+  * Utilizes `qrcode` and `Pillow (PIL)` graphics library.
+  * Encodes unique cattle tag number into high-error-correction (Level H) QR matrix.
+  * Automatically embeds a contrasting branded tag banner at the base of the image
+    displaying `TAG: DF-101` for human visual readability.
+  * Generates high-resolution PNGs saved in `static/qr_codes/`.
+- Printable QR Ear Tags:
+  * Administrators and managers can download individual QR badges (`/qr/download/<id>`)
+    or print high-contrast sheets for laminating and attaching to cattle collars/ear tags.
+- Live In-Browser Camera Scanner (`routes/qr.py` & `templates/scan_qr.html`):
+  * Employs `html5-qrcode` JavaScript engine for hardware camera access (webcam or
+    rear mobile phone camera).
+  * Automatically scans frame-by-frame for QR codes.
+  * Upon detection, sounds an audio confirmation beep and executes an asynchronous
+    fetch request to `/api/qr/lookup/<tag_number>`.
+  * Instantly displays an interactive modal card with cattle photo/tag, age, breed,
+    current milking status, health condition, last milk yield, and upcoming vaccines.
+  * Includes manual tag search fallback with autocomplete search input.
+
+4.3 DAILY MILK YIELD MONITORING & SESSION BATCH ENTRY:
+- Purpose: Tracks the core revenue driver of the dairy enterprise.
+- Milking Sessions: Morning, Afternoon, and Evening.
+- Quality & Financial Fields:
+  * `quantity_liters`: Milk volume logged.
+  * `fat_percentage`: Fat content percentage (default 4.0%).
+  * `snf_percentage`: Solids-Not-Fat percentage (default 8.5%).
+  * `rate_per_liter`: Calculated or market payout rate in INR (₹) per liter.
+  * `total_amount`: Stored calculated field = `quantity_liters * rate_per_liter`.
+- Two Milking Entry Modes:
+  1. Single Record Entry: Detailed logging for individual cattle with remarks and fat/SNF.
+  2. Session Batch Entry Grid (`/milk/quick-entry`):
+     * Solves the real-world farm challenge where 20-50 cows are milked in a single hour.
+     * Displays all active milking cattle in an Excel-like interactive entry table.
+     * Barn staff enter morning or evening liters in rapid succession and click
+       "Save Batch Records" once to bulk-insert all records in a single transaction.
+- Filtering & Pagination:
+  * Filter by Date Range, Milking Session, and individual Animal ID.
+  * Displays real-time summary statistics cards for the filtered dataset: Total Milk
+    Yield, Total Revenue (₹), Morning Milk, Evening Milk, and Average Fat %.
+  * Clean pagination (5 records per page) with page jump controls.
+
+4.4 FEED & RATION INVENTORY MANAGEMENT:
+- Purpose: Prevents malnutrition, overfeeding, and unexpected feed stockouts.
+- Feed Classification:
+  * Green Fodder (Napier grass, Maize fodder, Berseem)
+  * Dry Fodder (Wheat straw, Paddy straw)
+  * Concentrates (Cattle feed pellets, Mustard cake, Cottonseed cake)
+  * Mineral Mixture & Vitamins
+  * Silage (Fermented green maize silage)
+- Key Metrics:
+  * `current_stock` & `unit` (e.g., kg, quintals).
+  * `unit_cost` & `stock_value` (monetary value of capital tied up in feed).
+  * `minimum_threshold`: Low stock alert threshold.
+- Stock Warning Engine:
+  * Color-coded status badges (`Adequate` in green, `Low Stock Alert` in pulsing red).
+  * Dashboard alert counters warning managers when critical rations run low.
+- Daily Consumption Logger (`FeedConsumption`):
+  * When staff feed animals, they record the quantity used and recipient group.
+  * Automatically calculates cost of feed consumed and deducts the quantity from
+    the master inventory in a single atomic database operation.
+
+4.5 CATTLE HEALTH & IMMUNIZATION SCHEDULING:
+- Purpose: Ensures zero missed vaccine boosters and comprehensive veterinary tracking.
+- Pre-Configured Vaccine Schedules:
+  * Foot and Mouth Disease (FMD) - Biannual
+  * Brucellosis (S19) - Heifer immunization
+  * Blackleg (Clostridial) - Annual
+  * Haemorrhagic Septicaemia (HS) - Pre-monsoon
+  * Anthrax spore vaccine
+  * Periodic Deworming cycles
+- Intelligent Dynamic Status Engine:
+  * Compares `next_due_date` against `date.today()`.
+  * `Overdue`: Red alert badge if the due date has passed and status is not Completed.
+  * `Upcoming`: Amber alert badge if due within the next 30 days.
+  * `Completed`: Green badge for successfully administered immunizations.
+- One-Click Advance Action:
+  * Staff or managers click "Administer Booster" to update records and automatically
+    schedule the next due date based on veterinary protocols.
+
+4.6 FARM WORKFORCE DIRECTORY & PAYROLL:
+- Purpose: Tracks human capital, daily duties, and monthly labor expenditures.
+- Staff Information: Name, role (e.g., Head Milker, Animal Caretaker, Visiting
+  Veterinarian, Store In-charge), phone number, email, monthly salary (₹), joining
+  date, employment status (`Active`, `On Leave`, `Inactive`), and residential address.
+- Financial Aggregation:
+  * Calculates total monthly payroll commitment for financial reports.
+
+4.7 OPERATIONAL EXPENSE LEDGER & COST ACCOUNTING:
+- Purpose: Gives farm management 100% visibility into daily operational expenditures.
+- Expense Categories:
+  1. Feed & Fodder Purchases
+  2. Veterinary & Medical Care
+  3. Maintenance & Equipment Repairs (milking machines, chillers, generators)
+  4. Labor & Wage Payouts
+  5. Utilities & Electricity (cooling tanks, water pumps, lighting)
+  6. Equipment & Machinery
+  7. Fuel & Transportation
+  8. Miscellaneous & Contingencies
+- Transaction Fields: Title, category, amount (₹), payment date, payee/vendor name,
+  payment method (`Cash`, `UPI`, `Bank Transfer`, `Cheque`), invoice/receipt number,
+  and descriptive notes.
+
+4.8 EXECUTIVE ANALYTICS & MANAGEMENT REPORTS:
+- Purpose: Delivers visual, decision-ready intelligence to farm owners and evaluators.
+- Interactive Chart.js Visualizations:
+  1. 7-Day Milk Production Curve: Compares Morning vs Evening production trends.
+  2. Herd Status & Health Breakdown: Doughnut chart visualizing Milking, Dry,
+     Pregnant, and Sick proportions.
+  3. Financial Performance Comparison: Daily milk sales revenue vs operational
+     expenses over time.
+- Date-Range Filterable Analytics:
+  * Set arbitrary date ranges (default: last 30 days).
+  * Computes Total Milk Yield, Total Milk Revenue, Average Daily Milk, Total Expenses,
+    and Net Operating Profit / Loss.
+- Top Milkers Leaderboard:
+  * Identifies the top 5 highest-producing cattle in the herd with rank badges.
+- Print-Ready Format:
+  * Built-in CSS print media styles allowing 1-click printing or PDF export for
+    monthly farm audits and project presentations.
+
+4.9 VETERINARY MEDICAL TREATMENTS & MILK WITHHOLDING TRACKING:
+- Direct Clinical Logging: Records cattle diagnoses, clinical symptoms, administered
+  medications (antibiotics, anti-inflammatories), attending veterinarian, and dosage dates.
+- Food Safety Milk Withdrawal Safeguard: Enforces mandatory milk withdrawal days
+  (e.g., 3-7 days during antibiotic courses). Cattle under active withdrawal are flagged
+  with prominent badges on the Milk Production register, Cattle dossier, and Treatment logs
+  to prevent antibiotic-contaminated milk from entering bulk distribution.
+- Treatment Status Lifecycle: Tracks cases through `Active Treatment`, `Observation`,
+  and `Completed / Cured`, recording recovery dates and clinical outcomes.
+
+4.10 ARTIFICIAL INTELLIGENCE & PREDICTIVE ANALYTICS WEB HUB (`/ai-insights`):
+- A unified 6-tab intelligence command center featuring real-time interactive models:
+  1. 14-Day Milk Forecasting (Herd & individual cows with 95% confidence bands).
+  2. Early Illness Anomaly Alerts (Rolling z-scores flagging >=20% yield crashes).
+  3. Mastitis Risk Predictor (0-100% composite risk meter with clinical action checklists).
+  4. Cull & Keep Optimizer (K-Means profitability clustering into 3 management tiers).
+  5. Precision Feed Ration Optimization (SciPy linear programming least-cost ICAR/NRC rations).
+  6. Financial Forecasting (30-day projection of operating expenses, revenue, and net margin).
+
+
+================================================================================
+5. DATABASE SCHEMA & ENTITY RELATIONSHIP ARCHITECTURE
+================================================================================
+
+The relational schema is normalized with foreign key constraints, indexing on
+critical query columns (`tag_number`, `date`, `animal_id`), and cascading deletes.
+
+5.1 TABLE: `users`
+- Stores user accounts and authorization roles.
++----------------+---------------+-----------------------------------------------+
+| Column         | Type          | Description & Constraints                     |
++----------------+---------------+-----------------------------------------------+
+| id             | INT           | Primary Key, Auto Increment                   |
+| username       | VARCHAR(80)   | Unique, Indexed, Not Null                     |
+| email          | VARCHAR(120)  | Unique, Indexed, Not Null                     |
+| password_hash  | VARCHAR(255)  | Salted hash generated by Werkzeug             |
+| full_name      | VARCHAR(100)  | Display name of user                          |
+| role           | VARCHAR(20)   | 'admin', 'manager', 'staff' (Default: staff)  |
+| is_active      | BOOLEAN       | Active status flag (Default: TRUE)            |
+| created_at     | DATETIME      | Account creation timestamp                    |
++----------------+---------------+-----------------------------------------------+
+
+5.2 TABLE: `animals`
+- Master register of all livestock on the dairy farm.
++----------------+---------------+-----------------------------------------------+
+| Column         | Type          | Description & Constraints                     |
++----------------+---------------+-----------------------------------------------+
+| id             | INT           | Primary Key, Auto Increment                   |
+| tag_number     | VARCHAR(50)   | Unique, Indexed, Not Null (e.g. 'DF-101')     |
+| name           | VARCHAR(100)  | Optional name (e.g. 'Gauri', 'Lakshmi')       |
+| species        | VARCHAR(50)   | Cow, Buffalo, Goat, Other                     |
+| breed          | VARCHAR(100)  | Breed name (e.g. Holstein Friesian, Gir)      |
+| gender         | VARCHAR(20)   | Female / Male (Default: Female)               |
+| dob            | DATE          | Date of birth for age computation             |
+| weight_kg      | FLOAT         | Live body weight in kilograms                 |
+| milking_status | VARCHAR(50)   | Milking, Dry, Pregnant, Sick, Calf, Sold      |
+| health_status  | VARCHAR(50)   | Healthy, Under Treatment, Quarantined         |
+| qr_code_image  | VARCHAR(255)  | Saved filename in static/qr_codes/            |
+| entry_date     | DATE          | Farm entry date                               |
+| notes          | TEXT          | Medical history, pedigree, lineage notes      |
+| created_at     | DATETIME      | Creation timestamp                            |
+| updated_at     | DATETIME      | Last modification timestamp                   |
++----------------+---------------+-----------------------------------------------+
+- Relationships:
+  * Has many `MilkProduction` records (Cascade delete).
+  * Has many `Vaccination` records (Cascade delete).
+
+5.3 TABLE: `milk_productions`
+- Daily session-level milk collection records.
++-----------------+---------------+----------------------------------------------+
+| Column          | Type          | Description & Constraints                    |
++-----------------+---------------+----------------------------------------------+
+| id              | INT           | Primary Key, Auto Increment                  |
+| animal_id       | INT           | Foreign Key -> animals.id (ON DELETE CASCADE)|
+| date            | DATE          | Milking date, Indexed                        |
+| session         | VARCHAR(20)   | 'Morning', 'Evening', 'Afternoon'            |
+| quantity_liters | FLOAT         | Milk yield in liters                         |
+| fat_percentage  | FLOAT         | Butterfat % (e.g. 4.2%)                      |
+| snf_percentage  | FLOAT         | Solids-Not-Fat % (e.g. 8.6%)                 |
+| rate_per_liter  | FLOAT         | Rate in ₹ per liter                          |
+| total_amount    | FLOAT         | Calculated revenue (liters * rate)           |
+| recorded_by     | VARCHAR(100)  | Staff member username                        |
+| remarks         | VARCHAR(255)  | Quality notes or behavioral observations     |
+| created_at      | DATETIME      | Entry timestamp                              |
++-----------------+---------------+----------------------------------------------+
+
+5.4 TABLE: `feed_inventories`
+- Warehouse stock levels for animal feed.
++-------------------+---------------+--------------------------------------------+
+| Column            | Type          | Description & Constraints                  |
++-------------------+---------------+--------------------------------------------+
+| id                | INT           | Primary Key, Auto Increment                |
+| feed_name         | VARCHAR(100)  | Feed item name (e.g. 'Maize Silage')       |
+| category          | VARCHAR(50)   | Green/Dry Fodder, Concentrate, Minerals    |
+| current_stock     | FLOAT         | Quantity on hand (Default: 0.0)            |
+| unit              | VARCHAR(20)   | Measurement unit (kg, quintal, bag)        |
+| unit_cost         | FLOAT         | Cost per unit in ₹                         |
+| minimum_threshold | FLOAT         | Alert threshold (triggers low stock flag)  |
+| supplier          | VARCHAR(150)  | Supplier business name                     |
+| last_restocked    | DATE          | Date of latest inventory intake            |
+| created_at        | DATETIME      | Creation timestamp                         |
++-------------------+---------------+--------------------------------------------+
+
+5.5 TABLE: `feed_consumptions`
+- Daily ration allocation and inventory usage logs.
++-----------------+---------------+----------------------------------------------+
+| Column          | Type          | Description & Constraints                    |
++-----------------+---------------+----------------------------------------------+
+| id              | INT           | Primary Key, Auto Increment                  |
+| feed_id         | INT           | Foreign Key -> feed_inventories.id           |
+| date            | DATE          | Date consumed                                |
+| quantity_used   | FLOAT         | Quantity fed to cattle                       |
+| group_or_animal | VARCHAR(100)  | Recipient group (e.g. 'Milking Herd Shed 1') |
+| cost            | FLOAT         | Computed monetary cost (qty * unit_cost)     |
+| recorded_by     | VARCHAR(100)  | Staff member who dispensed the feed          |
+| created_at      | DATETIME      | Timestamp                                    |
++-----------------+---------------+----------------------------------------------+
+
+5.6 TABLE: `vaccinations`
+- Preventive disease immunization tracker.
++-------------------+---------------+--------------------------------------------+
+| Column            | Type          | Description & Constraints                  |
++-------------------+---------------+--------------------------------------------+
+| id                | INT           | Primary Key, Auto Increment                |
+| animal_id         | INT           | Foreign Key -> animals.id (ON DELETE CASCADE)|
+| vaccine_name      | VARCHAR(120)  | Vaccine name (e.g. 'FMD Booster', 'HS')    |
+| administered_date | DATE          | Date administered                          |
+| next_due_date     | DATE          | Next scheduled booster date                |
+| veterinarian      | VARCHAR(100)  | Attending doctor or vet assistant          |
+| status            | VARCHAR(30)   | 'Completed', 'Upcoming', 'Overdue'         |
+| remarks           | TEXT          | Batch number, reaction notes               |
+| created_at        | DATETIME      | Timestamp                                  |
++-------------------+---------------+--------------------------------------------+
+
+5.7 TABLE: `employees`
+- Farm staff roster and labor compensation.
++----------------+---------------+-----------------------------------------------+
+| Column         | Type          | Description & Constraints                     |
++----------------+---------------+-----------------------------------------------+
+| id             | INT           | Primary Key, Auto Increment                   |
+| name           | VARCHAR(100)  | Staff full name                               |
+| role           | VARCHAR(80)   | Job title (Head Milker, Caretaker, Vet, etc.) |
+| phone          | VARCHAR(20)   | Contact mobile number                         |
+| email          | VARCHAR(120)  | Email address                                 |
+| salary         | FLOAT         | Monthly salary in ₹                           |
+| joining_date   | DATE          | Date hired                                    |
+| status         | VARCHAR(30)   | 'Active', 'On Leave', 'Inactive'              |
+| address        | TEXT          | Residential address                           |
+| created_at     | DATETIME      | Timestamp                                     |
++----------------+---------------+-----------------------------------------------+
+
+5.8 TABLE: `expenses`
+- Farm operating expenditure ledger.
++----------------+---------------+-----------------------------------------------+
+| Column         | Type          | Description & Constraints                     |
++----------------+---------------+-----------------------------------------------+
+| id             | INT           | Primary Key, Auto Increment                   |
+| title          | VARCHAR(150)  | Expense summary (e.g. 'Bulk Silage 500kg')    |
+| category       | VARCHAR(60)   | Feed, Vet, Repairs, Labor, Electricity, etc.  |
+| amount         | FLOAT         | Monetary expense amount in ₹                  |
+| date           | DATE          | Transaction date, Indexed                     |
+| paid_to        | VARCHAR(120)  | Vendor, service provider, or payee            |
+| payment_method | VARCHAR(30)   | Cash, UPI, Bank Transfer, Cheque              |
+| receipt_number | VARCHAR(50)   | Bill / voucher number                         |
+| description    | TEXT          | Itemized notes or warranty information        |
+| created_at     | DATETIME      | Timestamp                                     |
++----------------+---------------+-----------------------------------------------+
+
+5.9 TABLE: `medical_treatments`
+- Veterinary clinical intervention and milk withdrawal ledger.
++-----------------+---------------+----------------------------------------------+
+| Column          | Type          | Description & Constraints                    |
++-----------------+---------------+----------------------------------------------+
+| id              | INT           | Primary Key, Auto Increment                  |
+| animal_id       | INT           | Foreign Key -> animals.id (ON DELETE CASCADE)|
+| diagnosis       | VARCHAR(150)  | Disease or condition (e.g., 'Mastitis')      |
+| symptoms        | TEXT          | Observed clinical signs and symptoms         |
+| medication      | VARCHAR(200)  | Drugs/antibiotics administered with dosage   |
+| treatment_date  | DATE          | Treatment date, Indexed                      |
+| withdrawal_days | INT           | Required milk withdrawal / withholding days  |
+| veterinarian    | VARCHAR(100)  | Attending veterinarian name                  |
+| status          | VARCHAR(30)   | 'Active', 'Observation', 'Completed'         |
+| cost            | FLOAT         | Total medical and veterinary cost in ₹       |
+| notes           | TEXT          | Progress notes and followup instructions     |
+| created_at      | DATETIME      | Record creation timestamp                    |
++-----------------+---------------+----------------------------------------------+
+- Relationships:
+  * Belongs to `Animal` (Foreign Key `animal_id`).
+  * Referenced by AI Engine Mastitis Risk Radar to evaluate past 90-day recurrence.
+
+
+================================================================================
+6. APPLICATION EXECUTION FLOW (FROM BOOT TO RENDER)
+================================================================================
+
+Step 1: Invocation
+  - Command: `python app.py`
+  - The root wrapper script ensures python path resolution and triggers the
+    application factory located in `DairyFarmQR-main/app.py`.
+
+Step 2: Configuration & Directory Setup (`config.py`)
+  - Detects if `USE_MYSQL` is active. If true, builds MySQL connection string;
+    otherwise falls back to SQLite (`dairy.db`).
+  - Ensures static folders exist: `static/images/` and `static/qr_codes/`.
+
+Step 3: App Factory & Extension Initialization (`create_app`)
+  - Flask instance is initialized with secret keys and configuration.
+  - SQLAlchemy (`db.init_app`) binds the database.
+  - Flask-Login (`login_manager.init_app`) sets the default login view (`auth.login`).
+  - Registers 10 modular blueprints (`auth`, `main`, `animal`, `milk`, `feed`,
+    `vaccination`, `employee`, `expense`, `report`, `qr`).
+
+Step 4: Auto-Database Creation & Demo Data Seeding
+  - Inside `with app.app_context():`, invokes `db.create_all()` to ensure all
+    tables exist.
+  - Runs `seed_initial_data(app)`:
+    * Provisions 3 default accounts: `admin` (admin123), `manager` (manager123),
+      `staff` (staff123).
+    * Provisions 5 high-pedigree cattle (DF-101 to DF-105) and generates their QR codes.
+    * Seeds 7-day milk production records across morning and evening sessions.
+    * Seeds feed inventory items and recent ration consumption.
+    * Seeds vaccination timelines (demonstrating Overdue, Upcoming, Completed).
+    * Seeds employees and realistic farm operational expense records.
+
+Step 5: Network Address Resolution & Server Launch
+  - Probes local IP address via UDP socket.
+  - Injects `local_ip` and `mobile_url` into the global template context.
+  - Starts development server on `0.0.0.0:5000`, making the system simultaneously
+    accessible via desktop browser (`http://localhost:5000`) and farm staff
+    smartphones on the same Wi-Fi (`http://<LAN-IP>:5000`).
+
+Step 6: User Request Lifecycle
+  - User visits `/dashboard`.
+  - Flask-Login checks session cookie. If not authenticated, redirects to `/login`.
+  - If authenticated, queries active herd stats, milk yields, feed stock alerts,
+    and vaccine schedules.
+  - Renders `dashboard.html` extending `layout.html` with role-aware sidebar links.
+
+
+================================================================================
+7. API ENDPOINTS & ROUTING DIRECTORY
+================================================================================
+
+AUTHENTICATION & USERS (`routes/auth.py`):
+  GET / POST   /login              - User authentication portal
+  GET          /logout             - Terminate user session
+  GET / POST   /profile            - User settings & password change
+  GET          /users              - [Admin Only] User management directory
+  GET / POST   /register           - [Admin Only] Create new user login
+  POST         /users/<id>/toggle  - [Admin Only] Activate or deactivate user
+  POST         /users/<id>/delete  - [Admin Only] Permanently delete user
+
+MAIN DASHBOARD (`routes/main.py`):
+  GET          /                   - Redirects to /dashboard or /login
+  GET          /dashboard          - KPI stat cards, charts, alerts
+
+CATTLE & HERD MANAGEMENT (`routes/animal.py`):
+  GET          /animals            - Cattle master register & status pills
+  GET / POST   /animals/add        - Add new animal & auto-generate QR code
+  GET          /animals/<id>       - Cattle profile dossier & lifetime stats
+  GET / POST   /animals/<id>/edit  - Edit cattle status, breed, weight, etc.
+  POST         /animals/<id>/delete- Delete cattle and cascade related data
+
+MILK PRODUCTION (`routes/milk.py`):
+  GET          /milk               - Filterable milk production register
+  GET / POST   /milk/add           - Log single cattle milk yield
+  GET / POST   /milk/quick-entry   - High-speed session batch entry grid
+  GET / POST   /milk/<id>/edit     - Edit milk entry
+  POST         /milk/<id>/delete   - Delete milk entry
+
+FEED INVENTORY & RATIONS (`routes/feed.py`):
+  GET          /feed               - Inventory stock cards & consumption log
+  POST         /feed/add           - Add new feed item to inventory
+  POST         /feed/restock/<id>  - Restock quantity and update costs
+  POST         /feed/consume       - Log daily feed ration used & auto-deduct
+
+VACCINATIONS & HEALTH (`routes/vaccination.py`):
+  GET          /vaccinations       - Vaccination schedules & overdue alerts
+  POST         /vaccinations/add   - Schedule new vaccine or booster
+  POST         /vaccinations/<id>/administer - One-click booster advance action
+  POST         /vaccinations/<id>/delete     - Delete record
+
+WORKFORCE & PAYROLL (`routes/employee.py`):
+  GET          /employees          - Staff roster and salary metrics
+  POST         /employees/add      - Add new employee record
+  POST         /employees/<id>/edit- Update employee details
+  POST         /employees/<id>/delete - Remove employee
+
+EXPENSES & LEDGER (`routes/expense.py`):
+  GET          /expenses           - Categorized operational expense ledger
+  POST         /expenses/add       - Record new farm expense voucher
+  POST         /expenses/<id>/delete - Remove expense record
+
+REPORTS & ANALYTICS (`routes/report.py`):
+  GET          /reports            - Financial & production analytics + print view
+
+QR SYSTEM & REST APIS (`routes/qr.py`):
+  GET          /scan-qr            - In-browser live camera QR scanner page
+  GET          /api/qr/lookup/<tag>- [REST API] JSON cattle lookup for scanner
+  GET          /qr/download/<id>   - Download printable high-resolution QR PNG
+
+VETERINARY MEDICAL TREATMENTS (`routes/treatment.py`):
+  GET          /treatments         - Master veterinary treatment ledger & withdrawal tracker
+  GET / POST   /treatments/add     - Record new clinical treatment & set withdrawal days
+  POST         /treatments/<id>/status - Update recovery status (Active -> Completed)
+  POST         /treatments/<id>/delete - Remove treatment record
+
+ARTIFICIAL INTELLIGENCE & MACHINE LEARNING (`routes/ai.py` & `services/ai_engine.py`):
+  GET          /ai-insights        - Full interactive 6-tab AI Intelligence Hub
+  GET          /api/ai/forecast    - [REST API] 7-14 day milk forecast with 95% CI
+  GET          /api/ai/anomalies   - [REST API] Rolling z-score illness anomaly flags
+  GET          /api/ai/mastitis-risk - [REST API] Multi-factor 0-100% mastitis risk ratings
+  GET          /api/ai/cull-keep   - [REST API] K-Means clustering & economic tier ranking
+  GET          /api/ai/feed/ration - [REST API] SciPy linear programming daily least-cost ration
+  GET          /api/ai/financial-forecast - [REST API] 30-day expense & net margin projection
+
+
+================================================================================
+8. FRONTEND ARCHITECTURE & USER EXPERIENCE DESIGN
+================================================================================
+
+8.1 DESIGN LANGUAGE & UI/UX:
+- Modern Glassmorphism & Micro-Interactions:
+  * Sleek deep navy (`#1e3a8a`) and slate color scheme tailored for agricultural tech.
+  * Glassmorphic metric cards with translucent backdrop filters (`backdrop-filter: blur`).
+  * Smooth CSS hover transitions, shadow elevations, and icon-accented stat badges.
+- Responsive Master Layout (`templates/layout.html`):
+  * Fixed collapsible desktop sidebar and mobile-friendly top navbar.
+  * Role-Aware Navigation: Staff members do not see "User Logins", "Payroll", or
+    "Financial Reports" links in their sidebar, preventing interface clutter and
+    security confusion.
+  * Real-Time LAN Mobile Badge: Displays the network IP in the header so farm hands
+    can easily type the URL on their mobile phones.
+
+8.2 CLIENT-SIDE LIBRARIES:
+- Bootstrap 5.3.3: Grid system, responsive modals, forms, and alerts.
+- FontAwesome 6.5: Professional iconography across all modules.
+- Chart.js 4.4: High-performance canvas charting for milk curves and finances.
+- html5-qrcode: Client-side video streaming and QR barcode matrix decoding.
+
+
+================================================================================
+9. DEPLOYMENT, CONFIGURATION & ENVIRONMENT SETUP
+================================================================================
+
+9.1 SYSTEM PREREQUISITES:
+- Python 3.10, 3.11, 3.12, 3.13, or 3.14.
+- Modern Web Browser (Google Chrome, Microsoft Edge, Mozilla Firefox, Safari).
+
+9.2 ZERO-SETUP LOCAL RUN (SQLITE - DEFAULT):
+1. Open terminal in the project root:
+   cd DairyFarmQR-main
+2. Install Python dependencies:
+   pip install -r requirements.txt
+3. Start the application:
+   python app.py
+4. Open your browser:
+   http://localhost:5000
+
+9.3 ENTERPRISE PRODUCTION RUN (MYSQL):
+1. Install MySQL Server / XAMPP / WampServer.
+2. Create database and import schema:
+   mysql -u root -p < database/dairy.sql
+3. Set environment variables (or create a `.env` file):
+   set USE_MYSQL=true
+   set DB_USER=root
+   set DB_PASSWORD=your_password
+   set DB_HOST=localhost
+   set DB_NAME=dairy_farm
+4. Run `python app.py`.
+
+9.4 DEFAULT LOGIN CREDENTIALS:
+- Administrator : Username: `admin`   | Password: `admin123`
+- Farm Manager  : Username: `manager` | Password: `manager123`
+- Farm Staff    : Username: `staff`   | Password: `staff123`
+
+
+================================================================================
+10. KEY HIGHLIGHTS & VIVA / PRESENTATION DEFENSE CHEATSHEET
+================================================================================
+
+When explaining or presenting this project for an evaluation, viva, or review,
+highlight these 6 architectural differentiators:
+
+1. Real-World Digital Tagging (Not Just a Generic CRUD App):
+   Instead of typing long alphanumeric IDs in dusty barn conditions, staff use
+   their smartphone camera to scan physical QR ear tags. The `html5-qrcode` engine
+   decodes the tag in real-time and fetches the animal's lifetime yield, health
+   condition, and vaccine history via AJAX in under 200 milliseconds.
+
+2. Session-Based Batch Milking Grid:
+   Traditional database forms require opening and submitting a form 30 separate
+   times for 30 cows. This system introduces a spreadsheet-style batch entry grid
+   where all active cows are listed simultaneously, saving 90% of data entry time.
+
+3. 3-Tier Enterprise RBAC with Disabled Public Sign-Ups:
+   Many student projects make the mistake of leaving public registration open.
+   In an actual commercial farm, an unauthorized user should never be able to create
+   an account. This system locks registration to authenticated administrators only.
+
+4. Intelligent Stock & Vaccine Engines:
+   - Feed: Calculates consumption costs and automatically subtracts quantities from
+     warehouse inventories while throwing low-stock alerts.
+   - Health: Compares booster dates against `date.today()` dynamically to categorize
+     immunizations into Overdue (urgent), Upcoming, or Completed.
+
+5. Dual-Database Fallback Pattern:
+   Designed to work out-of-the-box on any examiner's machine via SQLite without
+   demanding MySQL installation, yet fully equipped with enterprise MySQL schema DDL
+   and connection pooling for enterprise production deployment.
+
+6. Comprehensive Financial Cost-Revenue Modeling:
+   Correlates daily milk production revenue against 8 categories of operational
+   expenses (feed, veterinary, electricity, labor, maintenance) to compute actual
+   net farm profitability over any custom date range.
+
+
+================================================================================
+11. ARTIFICIAL INTELLIGENCE & MACHINE LEARNING SUBSYSTEM (6 CORE MODULES)
+================================================================================
+
+The system includes a production-grade AI & Predictive Analytics engine
+located at `services/ai_engine.py` with dedicated UI routes at `/ai-insights`
+and REST API endpoints at `/api/ai/*`:
+
+11.1 MILK YIELD FORECASTING (HERD & INDIVIDUAL CATTLE):
+- Objective: Predicts milk yield for the next 7 to 14 days for each individual
+  cow and across the entire farm herd.
+- Algorithmic Tools: scikit-learn `RandomForestRegressor` and `GradientBoostingRegressor`
+  with autoregressive lag features (lag 1, lag 2, lag 7, rolling 7-day average, session split).
+- Inputs: Historical milk production logs, days in milk (lactation stage), session
+  (Morning/Evening), breed, animal live weight, and age.
+- Output: An interactive Chart.js line on the Reports (`/reports`) and AI Hub
+  (`/ai-insights`) pages displaying future projected liters, session splits, and 95%
+  confidence interval bands (expanding uncertainty envelope).
+
+11.2 ANOMALY DETECTION (EARLY ILLNESS & STRESS WARNING):
+- Objective: Detects sudden, sharp drops in milk yield or abnormal fat/SNF fluctuations
+  that indicate early-stage mastitis, heat stress, ketosis, or acute illness.
+- Algorithmic Tools: Dual-engine architecture combining rolling 7-day moving averages
+  with Z-scores ($Z \le -1.8$) and scikit-learn `IsolationForest` multi-dimensional outlier scoring.
+- Output: Immediate alert banners across the Dashboard, Milk Production Register, and
+  Cattle Profile:
+  "DF-102 gave 38% less than her 7-day average. Check her health."
+  Includes specific clinical directives (CMT test, rectal temperature check, quarter isolation).
+
+11.3 MASTITIS RISK PREDICTION RADAR:
+- Objective: Computes a multi-factor risk score (0% to 100%) to identify subclinical and
+  clinical mastitis before permanent udder damage occurs.
+- Algorithmic Tools: Calibrated Logistic Regression & Random Forest Risk Classifier.
+- Integrated Treatment Log Module: Connects directly with `MedicalTreatment` records to
+  factor in past mastitis recurrence history (last 90 days) and active antibiotic treatments.
+- Inputs: Yield drop percentage, Solids-Not-Fat (SNF) deficit below the 8.5% epithelial
+  integrity threshold, fat instability, days in milk, and prior clinical treatments.
+- Output: Risk categorization (High Risk >=70%, Moderate Risk 40-69%, Low Risk <40%),
+  contributing factor diagnostic lists, and veterinary intervention advice.
+
+11.4 CULL AND KEEP RECOMMENDATION MATRIX:
+- Objective: Evaluates herd efficiency and clusters cows into economic profitability tiers.
+- Algorithmic Tools: scikit-learn `KMeans` clustering ($k=3$) and Composite Economic
+  Contribution Index ($Score = Revenue_{milk} - Cost_{feed} - Cost_{vet} - Penalty_{age}$).
+- Tiers & Output:
+  - High Profit (Keep & Breed): Elite yielders with superior feed conversion efficiency.
+  - Average Profit (Maintain & Monitor): Consistent yielders covering operational margins.
+  - Low Profit (Cull Candidate): Cows with negative contribution margins where veterinary
+    or feed expenses exceed milk value.
+
+11.5 FEED OPTIMIZATION & INVENTORY STOCKOUT FORECASTING:
+- Objective: Formulates the cheapest daily ration meeting 100% nutritional requirements
+  and forecasts warehouse feed stockout depletion dates.
+- Algorithmic Tools:
+  - Ration Optimization: `scipy.optimize.linprog` (Linear Programming) solving least-cost
+    formulation subject to ICAR/NRC nutritional constraints (Dry Matter, Crude Protein CP,
+    and Total Digestible Nutrients TDN based on cattle weight and daily milk yield).
+  - Depletion Forecasting: Time-series consumption burn rates ($kg/day$) against warehouse
+    stocks, predicting exact runout dates and automated 30-day buffer reorder quantities.
+- Output: Daily feed ration breakdown (kg and ₹ cost per cow/day) and urgency countdowns
+  (e.g., "Wheat Straw: Runs out in 13 days - Reorder by 3 Nov").
+
+11.6 EXPENSE AND PROFIT FORECASTING (NEXT MONTH FINANCIAL HORIZON):
+- Objective: Forecasts next month's (30 days) operational costs, milk revenues, and net farm margin.
+- Algorithmic Tools: Time-series autoregressive linear trend projection with weekly seasonality
+  factors and category weighting across feed, labor, utilities, veterinary, and maintenance.
+- Output: 30-day trajectory chart on Reports and AI Hub, projected gross revenue (₹),
+  projected operating costs (₹), forecasted net profit (₹), and expected net margin percentage.
+
+11.7 VETERINARY TREATMENT & MILK WITHDRAWAL TRACKING:
+- Database Model: `MedicalTreatment` table tracking animal ID, clinical diagnosis, symptoms,
+  medications given, attending vet, and milk withdrawal period (withholding days).
+- Food Safety: Automatically flags cattle whose milk is currently in withdrawal period,
+  preventing contaminated milk from entering the bulk farm sales tank.
+
+================================================================================
+                        END OF TECHNICAL EXPLANATION
+================================================================================

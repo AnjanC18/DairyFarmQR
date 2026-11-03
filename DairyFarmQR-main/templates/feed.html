@@ -62,6 +62,116 @@
   </div>
 </div>
 
+<!-- AI Stockout & Depletion Forecasting Cards -->
+{% if feed_depletion %}
+<div class="content-card mb-4">
+  <div class="content-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <h5 class="content-card-title mb-0">
+        <i class="fa-solid fa-clock text-danger me-2"></i>
+        AI Inventory Stockout & Depletion Forecasting
+      </h5>
+      <small class="text-muted">Predicts when stock will run out based on herd consumption trends so you can reorder in time</small>
+    </div>
+    <a href="{{ url_for('ai.ai_hub') }}#tab-feed" class="btn btn-sm btn-outline-primary">
+      <i class="fa-solid fa-sliders me-1"></i> Interactive Ration Calculator
+    </a>
+  </div>
+  <div class="content-card-body p-3">
+    <div class="row g-3">
+      {% for f in feed_depletion %}
+        <div class="col-md-6 col-xl-4">
+          <div class="p-3 rounded-3 border bg-light h-100 position-relative">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <span class="badge bg-secondary mb-1">{{ f.category }}</span>
+                <h6 class="fw-bold mb-0 text-dark">{{ f.feed_name }}</h6>
+              </div>
+              <span class="badge {% if f.reorder_urgency == 'CRITICAL' %}bg-danger{% elif f.reorder_urgency == 'URGENT' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                {{ f.days_remaining }} Days Left
+              </span>
+            </div>
+
+            <div class="d-flex justify-content-between small text-muted mb-2">
+              <span>Stock: <strong>{{ f.current_stock }} {{ f.unit }}</strong></span>
+              <span>Burn: <strong class="text-danger">{{ f.daily_burn_rate }} {{ f.unit }}/day</strong></span>
+            </div>
+
+            <div class="small mb-2">
+              Runout: <strong class="{% if f.needs_reorder %}text-danger{% else %}text-dark{% endif %}">{{ f.runout_date }}</strong> ({{ f.runout_day_name }})
+            </div>
+
+            {% if f.needs_reorder %}
+              <div class="p-2 rounded bg-danger-subtle text-danger small">
+                <i class="fa-solid fa-truck me-1"></i> Reorder <strong>{{ f.recommended_reorder_qty }} {{ f.unit }}</strong> (est ₹{{ f.estimated_reorder_cost }})
+              </div>
+            {% else %}
+              <div class="p-2 rounded bg-white text-success small border">
+                <i class="fa-solid fa-check me-1"></i> Stock healthy
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Scientific Daily Ration (NRC / ICAR Linear Programming) -->
+{% if optimal_ration %}
+<div class="content-card mb-4">
+  <div class="content-card-header d-flex justify-content-between align-items-center">
+    <h5 class="content-card-title mb-0">
+      <i class="fa-solid fa-utensils text-success me-2"></i>
+      Cheapest Daily Nutritional Ration (Linear Programming / scipy.optimize.linprog)
+    </h5>
+    <span class="badge bg-success-subtle text-success border border-success">
+      Cost: ₹{{ optimal_ration.total_daily_cost }}/cow/day (₹{{ optimal_ration.cost_per_liter }}/L milk)
+    </span>
+  </div>
+  <div class="content-card-body p-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-lg-8">
+        <div class="table-responsive">
+          <table class="table table-sm custom-table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Fodder / Feed Category</th>
+                <th>Recommended Feed</th>
+                <th>Daily Quantity (kg)</th>
+                <th>Unit Rate</th>
+                <th>Cost / Day</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in optimal_ration.ration_items %}
+                <tr>
+                  <td class="fw-bold">{{ item.category }}</td>
+                  <td>{{ item.feed_name }}</td>
+                  <td class="fw-bold text-success">{{ item.quantity_kg }} kg</td>
+                  <td>₹{{ item.unit_cost }}</td>
+                  <td class="fw-bold">₹{{ item.cost }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="p-3 bg-light rounded-3 border small">
+          <div class="fw-bold text-dark mb-1">NRC / ICAR Nutritional Fulfillment:</div>
+          <div class="text-muted mb-1">&bull; Delivered Dry Matter: <strong>{{ optimal_ration.delivered_dm }} kg</strong></div>
+          <div class="text-muted mb-1">&bull; Total Daily Mass: <strong>{{ optimal_ration.total_fresh_kg }} kg fresh</strong></div>
+          <div class="text-muted mb-2">&bull; Crude Protein Met: <strong>{{ optimal_ration.delivered_cp }} kg</strong></div>
+          <div class="text-success fw-bold">Cheapest ration meeting 100% nutritional targets.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- Feed Stock Cards Grid -->
 <h5 class="fw-bold mb-3"><i class="fa-solid fa-wheat-awn text-primary me-2"></i> Current Inventory Stocks</h5>
 <div class="row g-3 mb-4">

@@ -107,6 +107,31 @@ def reports():
     expense_categories = list(category_map.keys())
     expense_cat_amounts = [round(v, 2) for v in category_map.values()]
 
+    # ----------------------------------------------------------------------
+    # AI Engine Features Integration
+    # ----------------------------------------------------------------------
+    from services.ai_engine import DairyAIEngine
+    
+    # 1. Milk Yield 14-Day Forecast Line for Chart.js
+    milk_forecast = DairyAIEngine.forecast_milk_yield(days=14)
+
+    # Combined Timeline for Reports Page (Actual + 14-day Forecast)
+    # The actual line runs until the end_date, then the forecast line extends for 14 days
+    combined_dates = list(trend_dates) + milk_forecast['dates']
+    actual_milk_combined = list(trend_milk) + [None] * len(milk_forecast['dates'])
+    
+    # Connect forecast line seamlessly from last actual data point
+    last_actual = trend_milk[-1] if trend_milk else 0.0
+    forecast_milk_combined = [None] * (len(trend_dates) - 1) + [last_actual] + milk_forecast['forecast_liters']
+    forecast_upper_combined = [None] * (len(trend_dates) - 1) + [last_actual] + milk_forecast['upper_bound']
+    forecast_lower_combined = [None] * (len(trend_dates) - 1) + [last_actual] + milk_forecast['lower_bound']
+
+    # 2. Next Month (30-day) Expense and Profit Forecast
+    financial_forecast = DairyAIEngine.forecast_financials_next_month()
+
+    # 3. Cull & Keep Recommendation Leaderboard
+    cull_keep_data = DairyAIEngine.recommend_cull_keep()
+
     return render_template(
         'reports.html',
         start_date=start_date.strftime('%Y-%m-%d'),
@@ -125,5 +150,15 @@ def reports():
         top_animal_labels=top_animal_labels,
         top_animal_data=top_animal_data,
         expense_categories=expense_categories,
-        expense_cat_amounts=expense_cat_amounts
+        expense_cat_amounts=expense_cat_amounts,
+        # AI Forecast payloads
+        milk_forecast=milk_forecast,
+        combined_dates=combined_dates,
+        actual_milk_combined=actual_milk_combined,
+        forecast_milk_combined=forecast_milk_combined,
+        forecast_upper_combined=forecast_upper_combined,
+        forecast_lower_combined=forecast_lower_combined,
+        financial_forecast=financial_forecast,
+        cull_keep_data=cull_keep_data
     )
+

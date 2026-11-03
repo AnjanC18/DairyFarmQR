@@ -200,3 +200,21 @@ def delete_user(user_id):
 
     flash(f'User account "{username}" has been deleted.', 'success')
     return redirect(url_for('auth.user_list'))
+
+@auth_bp.route('/users/<int:user_id>/reset-password', methods=['POST'])
+@admin_required
+def reset_user_password(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        flash('User account not found.', 'danger')
+        return redirect(url_for('auth.user_list'))
+
+    new_password = request.form.get('new_password', '').strip()
+    if not new_password or len(new_password) < 6:
+        flash('Password must be at least 6 characters long.', 'danger')
+        return redirect(url_for('auth.user_list'))
+
+    user.set_password(new_password)
+    db.session.commit()
+    flash(f'Password for "{user.username}" has been updated to "{new_password}".', 'success')
+    return redirect(url_for('auth.user_list'))

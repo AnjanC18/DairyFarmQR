@@ -97,9 +97,22 @@
             <span>Vaccinations</span>
           </a>
         </li>
+        <li class="nav-item">
+          <a href="{{ url_for('treatment.treatment_list') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('treatment.') %}active{% endif %}">
+            <i class="fa-solid fa-notes-medical"></i>
+            <span>Medical Treatments</span>
+          </a>
+        </li>
 
         {% if current_user.is_authenticated and current_user.is_manager() %}
-        <li class="nav-header">Management</li>
+        <li class="nav-header">Management & AI</li>
+        <li class="nav-item">
+          <a href="{{ url_for('ai.ai_hub') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('ai.') %}active{% endif %}">
+            <i class="fa-solid fa-brain text-warning"></i>
+            <span class="fw-bold">AI Intelligence</span>
+            <span class="badge bg-primary ms-auto" style="font-size: 0.65rem;">ML Hub</span>
+          </a>
+        </li>
         <li class="nav-item">
           <a href="{{ url_for('employee.employee_list') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('employee.') %}active{% endif %}">
             <i class="fa-solid fa-users-gear"></i>

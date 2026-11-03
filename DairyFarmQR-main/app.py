@@ -12,6 +12,7 @@ from models.feed import FeedInventory, FeedConsumption
 from models.vaccination import Vaccination
 from models.employee import Employee
 from models.expense import Expense
+from models.treatment import MedicalTreatment
 from utils.qr_helper import generate_animal_qr
 
 def get_network_ip():
@@ -62,6 +63,8 @@ def create_app(config_class=Config):
     from routes.expense import expense_bp
     from routes.report import report_bp
     from routes.qr import qr_bp
+    from routes.treatment import treatment_bp
+    from routes.ai import ai_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -73,6 +76,8 @@ def create_app(config_class=Config):
     app.register_blueprint(expense_bp)
     app.register_blueprint(report_bp)
     app.register_blueprint(qr_bp)
+    app.register_blueprint(treatment_bp)
+    app.register_blueprint(ai_bp)
 
     # Error handlers
     @app.errorhandler(404)
@@ -270,6 +275,81 @@ def seed_initial_data(app):
         db.session.add_all(expenses)
         db.session.commit()
         print("[Seed] Created operational expenses.")
+
+    # 8. Seed Feed Consumptions (for burn rates & depletion forecasting)
+    if FeedConsumption.query.count() == 0:
+        today = date.today()
+        feed_items = FeedInventory.query.all()
+        if feed_items:
+            consumptions = []
+            for d_ago in range(14, 0, -1):
+                d = today - timedelta(days=d_ago)
+                for f in feed_items:
+                    cat = f.category.lower()
+                    if 'green' in cat:
+                        used = 120.0
+                    elif 'dry' in cat:
+                        used = 35.0
+                    elif 'concentrate' in cat:
+                        used = 28.0
+                    elif 'mineral' in cat:
+                        used = 0.8
+                    else:
+                        used = 15.0
+                    consumptions.append(
+                        FeedConsumption(
+                            feed_id=f.id,
+                            date=d,
+                            quantity_used=used,
+                            group_or_animal='All Milking Cattle',
+                            cost=round(used * f.unit_cost, 2),
+                            recorded_by='Admin'
+                        )
+                    )
+            db.session.add_all(consumptions)
+            db.session.commit()
+            print("[Seed] Created 14-day feed consumption logs.")
+
+    # 9. Seed Medical Treatments (for Mastitis risk and health tracking)
+    if MedicalTreatment.query.count() == 0:
+        today = date.today()
+        cow_102 = Animal.query.filter_by(tag_number='DF-102').first()
+        cow_107 = Animal.query.filter_by(tag_number='DF-107').first()
+        treatments = []
+        if cow_102:
+            treatments.append(
+                MedicalTreatment(
+                    animal_id=cow_102.id,
+                    diagnosis='Subclinical Mastitis',
+                    symptoms='38% drop in morning milk, mild udder warmth, elevated somatic cell count',
+                    treatment_given='Intramammary Ceftiofur infusion + herbal udder spray',
+                    administered_date=today,
+                    veterinarian='Dr. Alok Verma',
+                    withdrawal_period_days=3,
+                    status='Under Treatment',
+                    cost=420.0,
+                    notes='Monitor next milking session for flakes or clotting.'
+                )
+            )
+        if cow_107:
+            treatments.append(
+                MedicalTreatment(
+                    animal_id=cow_107.id,
+                    diagnosis='Clinical Mastitis',
+                    symptoms='Swollen left hind quarter, hard udder, blood tinged milk',
+                    treatment_given='Intramammary Amoxicillin + Flunixin Meglumine injection',
+                    administered_date=today - timedelta(days=2),
+                    veterinarian='Dr. Alok Verma',
+                    withdrawal_period_days=4,
+                    status='Under Treatment',
+                    cost=650.0,
+                    notes='Isolate milking unit, do not mix milk in bulk tank.'
+                )
+            )
+        if treatments:
+            db.session.add_all(treatments)
+            db.session.commit()
+            print("[Seed] Created sample medical treatments.")
 
 app = create_app()
 

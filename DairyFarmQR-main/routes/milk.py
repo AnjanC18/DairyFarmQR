@@ -62,6 +62,13 @@ def milk_list():
 
     animals = Animal.query.filter_by(milking_status='Milking').order_by(Animal.tag_number).all()
 
+    # AI Early Illness Anomaly Alerts
+    from services.ai_engine import DairyAIEngine
+    try:
+        anomalies = DairyAIEngine.detect_yield_anomalies(lookback_days=14)
+    except Exception:
+        anomalies = []
+
     return render_template(
         'milk_production.html',
         records=records,
@@ -77,7 +84,8 @@ def milk_list():
         selected_date=date_filter_str,
         selected_session=session_filter,
         selected_animal=animal_filter,
-        today=date.today().strftime('%Y-%m-%d')
+        today=date.today().strftime('%Y-%m-%d'),
+        anomalies=anomalies
     )
 
 @milk_bp.route('/milk/add', methods=['GET', 'POST'])
@@ -122,7 +130,36 @@ def add_milk():
 
             animal = db.session.get(Animal, int(animal_id))
             tag = animal.tag_number if animal else ''
-            flash(f'Logged {qty_val} L milk for {tag} ({session} session). Total: ₹{record.total_amount:.2f}', 'success')
+
+            # AI Anomaly Early Illness Warning Check
+            from datetime import timedelta
+            past_records = MilkProduction.query.filter(
+                MilkProduction.animal_id == int(animal_id),
+                MilkProduction.date >= (entry_date - timedelta(days=7)),
+                MilkProduction.id != record.id
+            ).all()
+
+            anomaly_alert = None
+            if past_records:
+                # Group by day
+                daily_sums = {}
+                for r in past_records:
+                    daily_sums[r.date] = daily_sums.get(r.date, 0.0) + r.quantity_liters
+                avg_7day = sum(daily_sums.values()) / len(daily_sums) if daily_sums else 0.0
+                
+                # Check session or daily yield drop
+                session_recs = [r.quantity_liters for r in past_records if r.session == session]
+                avg_session = (sum(session_recs) / len(session_recs)) if session_recs else (avg_7day / 2.0)
+                
+                if avg_session > 0 and (avg_session - qty_val) / avg_session >= 0.25:
+                    drop_pct = round(((avg_session - qty_val) / avg_session) * 100)
+                    anomaly_alert = f"⚠️ EARLY ILLNESS ALERT: {tag} gave {drop_pct}% less than her 7-day average ({qty_val}L vs {avg_session:.1f}L avg). Check her health for possible mastitis or fever!"
+
+            if anomaly_alert:
+                flash(f'Logged {qty_val} L milk for {tag}. Total: ₹{record.total_amount:.2f}', 'success')
+                flash(anomaly_alert, 'danger')
+            else:
+                flash(f'Logged {qty_val} L milk for {tag} ({session} session). Total: ₹{record.total_amount:.2f}', 'success')
         except Exception as e:
             db.session.rollback()
             flash(f'Error logging milk entry: {str(e)}', 'danger')
@@ -132,6 +169,7 @@ def add_milk():
     preselect_animal = request.args.get('animal_id')
     animals = Animal.query.order_by(Animal.tag_number).all()
     return render_template('milk_production.html', animals=animals, preselect_animal=preselect_animal, today=date.today().strftime('%Y-%m-%d'))
+
 
 @milk_bp.route('/milk/quick-entry', methods=['GET', 'POST'])
 @login_required

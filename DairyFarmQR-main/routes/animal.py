@@ -157,16 +157,40 @@ def animal_detail(id):
     # Vaccinations for this animal
     vaccinations = Vaccination.query.filter_by(animal_id=animal.id).order_by(Vaccination.administered_date.desc()).all()
 
+    # Medical Treatments for this animal
+    from models.treatment import MedicalTreatment
+    treatments = MedicalTreatment.query.filter_by(animal_id=animal.id).order_by(MedicalTreatment.administered_date.desc()).all()
+
     # Calculate average daily yield in last 7 days
     recent_yields = [r.quantity_liters for r in milk_records[:14]]
     avg_yield = round(sum(recent_yields) / len(recent_yields), 2) if recent_yields else 0.0
+
+    # AI Intelligence for this individual animal
+    from services.ai_engine import DairyAIEngine
+    try:
+        cow_forecast = DairyAIEngine.forecast_milk_yield(days=14, animal_id=animal.id)
+        mastitis_list = DairyAIEngine.predict_mastitis_risk(animal_id=animal.id)
+        mastitis_info = mastitis_list[0] if mastitis_list else None
+        cow_anomalies = [a for a in DairyAIEngine.detect_yield_anomalies(lookback_days=14) if a['animal_id'] == animal.id]
+        cow_ration = DairyAIEngine.optimize_feed_ration(animal_id=animal.id)
+    except Exception as e:
+        print(f"[AI Animal Detail Warning] {e}")
+        cow_forecast = None
+        mastitis_info = None
+        cow_anomalies = []
+        cow_ration = None
 
     return render_template(
         'animal_detail.html',
         animal=animal,
         milk_records=milk_records,
         vaccinations=vaccinations,
-        avg_yield=avg_yield
+        treatments=treatments,
+        avg_yield=avg_yield,
+        cow_forecast=cow_forecast,
+        mastitis_info=mastitis_info,
+        cow_anomalies=cow_anomalies,
+        cow_ration=cow_ration
     )
 
 @animal_bp.route('/animals/edit/<int:id>', methods=['GET', 'POST'])

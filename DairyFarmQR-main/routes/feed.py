@@ -15,13 +15,25 @@ def feed_list():
     total_stock_value = sum(f.stock_value for f in feeds)
     low_stock_count = sum(1 for f in feeds if f.is_low_stock)
 
+    # AI Feed Depletion Forecasting & Ration Optimization
+    from services.ai_engine import DairyAIEngine
+    try:
+        feed_depletion = DairyAIEngine.forecast_feed_depletion()
+        optimal_ration = DairyAIEngine.optimize_feed_ration()
+    except Exception as e:
+        print(f"[AI Feed Warning] {e}")
+        feed_depletion = []
+        optimal_ration = None
+
     return render_template(
         'feed.html',
         feeds=feeds,
         consumptions=consumptions,
         total_stock_value=round(total_stock_value, 2),
         low_stock_count=low_stock_count,
-        today=date.today().strftime('%Y-%m-%d')
+        today=date.today().strftime('%Y-%m-%d'),
+        feed_depletion=feed_depletion,
+        optimal_ration=optimal_ration
     )
 
 @feed_bp.route('/feed/add-stock', methods=['POST'])
